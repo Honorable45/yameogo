@@ -14,6 +14,7 @@
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "db:demo:clear": "tsx prisma/seed-demo.ts --clear",
     "import:catalogue": "tsx --env-file=.env prisma/import-catalogue.ts",
+    "storage:copy-to-r2": "tsx --env-file=.env prisma/copy-uploads-to-r2.ts",
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand --testPathPattern=src/",
     "test:int": "jest --runInBand --testPathPattern=test/"
