@@ -1,4 +1,5 @@
 import { BadgeCheck } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { MoreLink, ProductGrid, SectionHeading, Stars } from '@/components/site/catalog';
 import { HeroLogoAnimation } from '@/components/site/hero-logo-animation';
@@ -25,6 +26,9 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
   );
 }
 
+/** Photo d'accueil par défaut (Unsplash, licence libre), remplaçable dans l'admin : Paramètres › Photos du site. */
+const DEFAULT_HERO = 'https://images.unsplash.com/photo-1556656793-08538906a9f8';
+
 const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
 
 export default async function HomePage() {
@@ -46,9 +50,9 @@ export default async function HomePage() {
     <>
       {/* Accueil : logo animé à gauche, slogan et boutons à droite (logo au-dessus du texte sur mobile). */}
       <section className="relative overflow-hidden bg-paper">
-        {/* Lueurs discrètes aux couleurs du logo. */}
-        <span className="pointer-events-none absolute -left-40 -top-40 size-[38rem] rounded-full bg-ochre/10 blur-3xl" aria-hidden="true" />
-        <span className="pointer-events-none absolute -bottom-48 -right-40 size-[36rem] rounded-full bg-navy/10 blur-3xl" aria-hidden="true" />
+        {/* Photo de fond, éclaircie pour que le logo et le slogan restent lisibles. */}
+        <Image src={settings?.heroImageUrl || DEFAULT_HERO} alt={settings?.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />
+        <span className="pointer-events-none absolute inset-0 bg-paper/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-paper/70 lg:via-paper/80 lg:to-paper/90" aria-hidden="true" />
         <div className="container-page relative grid min-h-[88svh] items-center gap-6 pb-14 pt-36 lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
           <div className="flex justify-center lg:col-span-6 lg:justify-start">
             <HeroLogoAnimation className="w-full max-w-[420px] sm:max-w-[500px] lg:max-w-[560px]" />

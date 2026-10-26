@@ -46,8 +46,8 @@ async function main() {
       shopName: 'Yameogo Smart Tech',
       tagline: 'La qualité au meilleur prix',
       // Photos libres de droits (licence Unsplash) — remplaçables depuis Paramètres › Photos du site.
-      heroImageUrl: 'https://images.unsplash.com/photo-1691449808001-bb8c157f0094?w=1600&q=80&fm=webp',
-      heroImageAlt: 'Smartphone et écouteurs sans fil posés sur une table',
+      heroImageUrl: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1600&q=80&fm=webp',
+      heroImageAlt: 'Smartphones posés sur un fond bleu clair',
       phonesImageUrl: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1600&q=80&fm=webp',
       phonesImageAlt: 'Plusieurs smartphones posés à plat',
       shopImageUrl: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=1600&q=80&fm=webp',
