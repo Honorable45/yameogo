@@ -44,16 +44,16 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Accueil : slogan à gauche, logo animé à droite (au-dessus du texte sur mobile). */}
+      {/* Accueil : logo animé à gauche, slogan et boutons à droite (logo au-dessus du texte sur mobile). */}
       <section className="relative overflow-hidden bg-paper">
         {/* Lueurs discrètes aux couleurs du logo. */}
-        <span className="pointer-events-none absolute -right-40 -top-40 size-[38rem] rounded-full bg-ochre/10 blur-3xl" aria-hidden="true" />
-        <span className="pointer-events-none absolute -bottom-48 -left-40 size-[36rem] rounded-full bg-navy/10 blur-3xl" aria-hidden="true" />
+        <span className="pointer-events-none absolute -left-40 -top-40 size-[38rem] rounded-full bg-ochre/10 blur-3xl" aria-hidden="true" />
+        <span className="pointer-events-none absolute -bottom-48 -right-40 size-[36rem] rounded-full bg-navy/10 blur-3xl" aria-hidden="true" />
         <div className="container-page relative grid min-h-[88svh] items-center gap-6 pb-14 pt-36 lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
-          <div className="flex justify-center lg:order-2 lg:col-span-6 lg:justify-end">
+          <div className="flex justify-center lg:col-span-6 lg:justify-start">
             <HeroLogoAnimation className="w-full max-w-[420px] sm:max-w-[500px] lg:max-w-[560px]" />
           </div>
-          <div className="text-center lg:order-1 lg:col-span-6 lg:text-left">
+          <div className="text-center lg:col-span-6 lg:pl-6 lg:text-left">
             <h1 className="display text-[40px] leading-[1.05] text-navy sm:text-[56px] lg:text-[68px]">
               <span className="sr-only">{shopName} — </span>
               <Reveal text={tagline} start={taglineStart} step={150} />
