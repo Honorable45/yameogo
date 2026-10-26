@@ -1,0 +1,1038 @@
+// YAMEOGO — modèle de données
+//
+// Conventions :
+// - Montants en francs CFA (XOF), stockés en entiers (le XOF n'a pas de subdivision).
+// - Dates stockées en UTC ; les périodes statistiques sont calculées dans le fuseau BUSINESS_TIMEZONE.
+// - Les opérations financières validées ne sont jamais supprimées : elles sont annulées
+//   (statut + motif) ou corrigées par une nouvelle écriture.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Utilisateurs & sécurité
+
+enum Role {
+  MANAGER // Responsable
+  TECHNICIAN // Réparateur
+  SELLER // Vendeur
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role
+  active       Boolean   @default(true)
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  assignedRepairs  RepairJob[]               @relation("RepairTechnician")
+  createdRepairs   RepairJob[]               @relation("RepairCreatedBy")
+  repairHistory    RepairStatusHistory[]
+  orderHistory     OrderStatusHistory[]
+  createdOrders    Order[]                   @relation("OrderCreatedBy")
+  payments         Payment[]
+  movements        InventoryMovement[]
+  expenses         Expense[]                 @relation("ExpenseCreatedBy")
+  voidedExpenses   Expense[]                 @relation("ExpenseVoidedBy")
+  purchases        Purchase[]                @relation("PurchaseCreatedBy")
+  repairParts      RepairPart[]
+  quotes           RepairQuote[]
+  reviewTokens     ReviewVerificationToken[]
+  moderatedReviews Review[]
+  usedPhoneEvents  UsedPhoneEvent[]
+  inventoryCounts  InventoryCount[]
+  orderReturns     OrderReturn[]
+  purchasePayments PurchasePayment[]
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  lastUsedAt DateTime  @default(now())
+  revokedAt  DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  summary   String
+  // Détails techniques de l'opération (valeurs avant/après) — usage journal uniquement.
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// Compteurs pour les numéros lisibles (R-2026-00001, C-2026-00001…)
+model Counter {
+  key   String @id
+  value Int
+}
+
+// ───────────────────────────── Paramètres de la boutique
+
+model BusinessSettings {
+  id                    Int      @id @default(1)
+  shopName              String   @default("YAMEOGO")
+  tagline               String?
+  logoUrl               String?
+  heroImageUrl          String?
+  heroImageAlt          String?
+  repairImageUrl        String?
+  repairImageAlt        String?
+  phonesImageUrl        String?
+  phonesImageAlt        String?
+  shopImageUrl          String?
+  shopImageAlt          String?
+  tiktokUrl             String?
+  instagramUrl          String?
+  facebookUrl           String?
+  phone                 String?
+  whatsapp              String?
+  email                 String?
+  addressLine           String?
+  city                  String?
+  country               String?
+  mapUrl                String?
+  // Position GPS de la boutique (carte et itinéraire sur le site).
+  latitude              Float?
+  longitude             Float?
+  legalName             String?
+  legalForm             String?
+  registrationNumber    String?
+  taxId                 String?
+  publicationDirector   String?
+  hostingProvider       String?
+  repairWarrantyText    String?
+  deliveryEnabled       Boolean  @default(false)
+  deliveryFee           Int      @default(0)
+  deliveryArea          String?
+  cashOnDeliveryEnabled Boolean  @default(false)
+  payInStoreEnabled     Boolean  @default(true)
+  mobileMoneyEnabled    Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
+
+model OpeningHour {
+  id        Int     @id @default(autoincrement())
+  // 1 = lundi … 7 = dimanche (ISO 8601)
+  dayOfWeek Int     @unique
+  closed    Boolean @default(false)
+  opensAt   String? // "08:00"
+  closesAt  String? // "19:30"
+}
+
+// ───────────────────────────── Clients
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique // format normalisé (chiffres, préfixe + conservé)
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders         Order[]
+  repairJobs     RepairJob[]
+  repairRequests RepairRequest[]
+}
+
+// ───────────────────────────── Marques et modèles (réparation, compatibilités, occasions)
+
+model Brand {
+  id         String                 @id @default(cuid())
+  name       String                 @unique
+  slug       String                 @unique
+  position   Int                    @default(0)
+  active     Boolean                @default(true)
+  models     PhoneModel[]
+  compat     ProductCompatibility[]
+  usedPhones UsedPhone[]
+}
+
+model PhoneModel {
+  id           String                 @id @default(cuid())
+  brandId      String
+  brand        Brand                  @relation(fields: [brandId], references: [id])
+  name         String
+  slug         String
+  position     Int                    @default(0)
+  active       Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  repairPrices RepairPrice[]
+  compat       ProductCompatibility[]
+  usedPhones   UsedPhone[]
+  repairJobs   RepairJob[]
+  requests     RepairRequest[]
+
+  @@unique([brandId, slug])
+  @@index([brandId, active])
+}
+
+// ───────────────────────────── Catalogue (accessoires et pièces détachées)
+
+enum ProductKind {
+  ACCESSORY // vendu en boutique et en ligne
+  PART // pièce détachée, usage atelier, jamais publiée
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Category {
+  id          String      @id @default(cuid())
+  kind        ProductKind @default(ACCESSORY)
+  name        String
+  slug        String      @unique
+  description String?
+  position    Int         @default(0)
+  active      Boolean     @default(true)
+  products    Product[]
+}
+
+model Supplier {
+  id        String      @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  products  Product[]
+  purchases Purchase[]
+  phones    UsedPhone[]
+}
+
+model Product {
+  id                String        @id @default(cuid())
+  kind              ProductKind   @default(ACCESSORY)
+  sku               String        @unique
+  slug              String        @unique
+  name              String
+  description       String        @default("")
+  categoryId        String
+  category          Category      @relation(fields: [categoryId], references: [id])
+  supplierId        String?
+  supplier          Supplier?     @relation(fields: [supplierId], references: [id])
+  salePrice         Int
+  // Coût moyen pondéré courant (XOF). Mis à jour à chaque entrée en stock valorisée.
+  averageCost       Int           @default(0)
+  // Quantité physiquement présente en boutique.
+  stockQuantity     Int           @default(0)
+  // Quantité réservée par des commandes non terminées. Disponible = stock - réservé.
+  reservedQuantity  Int           @default(0)
+  lowStockThreshold Int           @default(2)
+  status            ProductStatus @default(ACTIVE)
+  // Visible sur le site public (accessoires uniquement).
+  published         Boolean       @default(true)
+  // Données de démonstration (environnement de développement).
+  isDemo            Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  images        ProductImage[]
+  compatibility ProductCompatibility[]
+  movements     InventoryMovement[]
+  orderItems    OrderItem[]
+  purchaseItems PurchaseItem[]
+  repairParts   RepairPart[]
+  countLines    InventoryCountLine[]
+
+  @@index([kind, status, published])
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // URL externe, ou clé de stockage (images téléversées, déclinées en plusieurs largeurs).
+  url        String?
+  storageKey String?
+  alt        String  @default("")
+  position   Int     @default(0)
+  width      Int?
+  height     Int?
+
+  @@index([productId, position])
+}
+
+// Compatibilité : une marque entière (phoneModelId nul) ou un modèle précis.
+model ProductCompatibility {
+  id           String      @id @default(cuid())
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  brandId      String
+  brand        Brand       @relation(fields: [brandId], references: [id])
+  phoneModelId String?
+  phoneModel   PhoneModel? @relation(fields: [phoneModelId], references: [id])
+
+  @@index([brandId])
+  @@index([phoneModelId])
+  @@index([productId])
+}
+
+// ───────────────────────────── Stocks
+
+enum MovementType {
+  INITIAL // stock initial
+  PURCHASE // réception d'un approvisionnement
+  PURCHASE_CANCEL // annulation d'un approvisionnement validé
+  SALE // sortie à la vente (commande terminée)
+  SALE_RETURN // retour client remis en stock
+  REPAIR_USE // pièce consommée par une réparation
+  REPAIR_RETURN // pièce retirée d'une réparation et remise en stock
+  ADJUSTMENT // correction manuelle justifiée
+  COUNT // correction issue d'un inventaire
+}
+
+model InventoryMovement {
+  id               String       @id @default(cuid())
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  type             MovementType
+  // Quantité signée : positive = entrée, négative = sortie.
+  quantity         Int
+  // Coût unitaire valorisant ce mouvement (XOF).
+  unitCost         Int
+  stockAfter       Int
+  averageCostAfter Int
+  reason           String?
+  purchaseItemId   String?
+  orderItemId      String?
+  repairPartId     String?
+  orderReturnId    String?
+  countLineId      String?
+  userId           String?
+  user             User?        @relation(fields: [userId], references: [id])
+  createdAt        DateTime     @default(now())
+
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+}
+
+model InventoryCount {
+  id          String               @id @default(cuid())
+  note        String?
+  createdById String
+  createdBy   User                 @relation(fields: [createdById], references: [id])
+  createdAt   DateTime             @default(now())
+  lines       InventoryCountLine[]
+}
+
+model InventoryCountLine {
+  id         String         @id @default(cuid())
+  countId    String
+  count      InventoryCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product        @relation(fields: [productId], references: [id])
+  expected   Int
+  counted    Int
+  difference Int
+  note       String?
+
+  @@index([productId])
+}
+
+// ───────────────────────────── Approvisionnements
+
+enum PurchaseStatus {
+  DRAFT
+  VALIDATED
+  CANCELLED
+}
+
+enum SettlementStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+model Purchase {
+  id            String           @id @default(cuid())
+  number        String           @unique
+  supplierId    String
+  supplier      Supplier         @relation(fields: [supplierId], references: [id])
+  invoiceNumber String?
+  purchaseDate  DateTime
+  status        PurchaseStatus   @default(DRAFT)
+  itemsTotal    Int              @default(0)
+  // Frais annexes (transport, douane…) répartis au prorata de la valeur des lignes.
+  extraCosts    Int              @default(0)
+  total         Int              @default(0)
+  amountPaid    Int              @default(0)
+  paymentStatus SettlementStatus @default(UNPAID)
+  note          String?
+  createdById   String
+  createdBy     User             @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
+  validatedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items    PurchaseItem[]
+  payments PurchasePayment[]
+
+  @@index([status, purchaseDate])
+}
+
+model PurchaseItem {
+  id             String   @id @default(cuid())
+  purchaseId     String
+  purchase       Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  quantity       Int
+  unitCost       Int
+  lineTotal      Int
+  allocatedExtra Int      @default(0)
+  landedUnitCost Int      @default(0)
+}
+
+model PurchasePayment {
+  id           String        @id @default(cuid())
+  purchaseId   String
+  purchase     Purchase      @relation(fields: [purchaseId], references: [id])
+  amount       Int
+  method       PaymentMethod
+  paidAt       DateTime
+  note         String?
+  cancelledAt  DateTime?
+  cancelReason String?
+  recordedById String
+  recordedBy   User          @relation(fields: [recordedById], references: [id])
+  createdAt    DateTime      @default(now())
+}
+
+// ───────────────────────────── Téléphones d'occasion (exemplaires uniques)
+
+enum UsedPhoneStatus {
+  PENDING_CHECK // En attente de vérification
+  AVAILABLE
+  RESERVED
+  SOLD
+  RETURNED
+  ARCHIVED
+}
+
+// Catégorie commerciale d'un téléphone.
+enum PhoneCondition {
+  NEW // Neuf
+  IMPORTED // « Venu » : déjà utilisé, importé d'Europe ou des États-Unis
+  USED // Occasion : utilisé localement
+}
+
+enum PhoneGrade {
+  LIKE_NEW
+  VERY_GOOD
+  GOOD
+  FAIR
+}
+
+model UsedPhone {
+  id                  String          @id @default(cuid())
+  reference           String          @unique
+  slug                String          @unique
+  brandId             String
+  brand               Brand           @relation(fields: [brandId], references: [id])
+  phoneModelId        String?
+  phoneModel          PhoneModel?     @relation(fields: [phoneModelId], references: [id])
+  modelName           String
+  condition           PhoneCondition  @default(USED)
+  storageGb           Int?
+  ramGb               Int?
+  color               String?
+  grade               PhoneGrade
+  batteryHealth       Int?
+  knownDefects        String?
+  includedAccessories String?
+  description         String?
+  purchasePrice       Int
+  salePrice           Int
+  warrantyMonths      Int             @default(0)
+  acquiredAt          DateTime
+  acquiredFrom        String?
+  supplierId          String?
+  supplier            Supplier?       @relation(fields: [supplierId], references: [id])
+  // IMEI chiffré (AES-256-GCM) ; empreinte HMAC pour l'unicité ; 4 derniers chiffres pour l'affichage interne.
+  imeiEncrypted       String?
+  imeiHash            String?         @unique
+  imeiLast4           String?
+  status              UsedPhoneStatus @default(PENDING_CHECK)
+  soldAt              DateTime?
+  isDemo              Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  images     UsedPhoneImage[]
+  events     UsedPhoneEvent[]
+  orderItems OrderItem[]
+
+  @@index([status])
+  @@index([brandId])
+  @@index([condition, status])
+}
+
+model UsedPhoneImage {
+  id          String    @id @default(cuid())
+  usedPhoneId String
+  usedPhone   UsedPhone @relation(fields: [usedPhoneId], references: [id], onDelete: Cascade)
+  url         String?
+  storageKey  String?
+  alt         String    @default("")
+  position    Int       @default(0)
+  width       Int?
+  height      Int?
+
+  @@index([usedPhoneId, position])
+}
+
+model UsedPhoneEvent {
+  id          String           @id @default(cuid())
+  usedPhoneId String
+  usedPhone   UsedPhone        @relation(fields: [usedPhoneId], references: [id], onDelete: Cascade)
+  type        String
+  fromStatus  UsedPhoneStatus?
+  toStatus    UsedPhoneStatus?
+  message     String
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([usedPhoneId, createdAt])
+}
+
+// ───────────────────────────── Réparations : catalogue de tarifs
+
+model RepairType {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  slug        String          @unique
+  description String?
+  position    Int             @default(0)
+  active      Boolean         @default(true)
+  prices      RepairPrice[]
+  requests    RepairRequest[]
+  jobs        RepairJob[]
+}
+
+model RepairPrice {
+  id              String     @id @default(cuid())
+  phoneModelId    String
+  phoneModel      PhoneModel @relation(fields: [phoneModelId], references: [id])
+  repairTypeId    String
+  repairType      RepairType @relation(fields: [repairTypeId], references: [id])
+  partsPrice      Int
+  laborPrice      Int
+  // Toujours égal à partsPrice + laborPrice (calculé par le backend).
+  totalPrice      Int
+  durationMinutes Int?
+  conditions      String?
+  active          Boolean    @default(true)
+  isDemo          Boolean    @default(false)
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([phoneModelId, repairTypeId])
+}
+
+// ───────────────────────────── Réparations : demandes de devis en ligne
+
+enum RepairRequestStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  CLOSED
+}
+
+model RepairRequest {
+  id               String              @id @default(cuid())
+  reference        String              @unique
+  brandName        String
+  phoneModelId     String?
+  phoneModel       PhoneModel?         @relation(fields: [phoneModelId], references: [id])
+  modelName        String
+  repairTypeId     String?
+  repairType       RepairType?         @relation(fields: [repairTypeId], references: [id])
+  issueLabel       String
+  // Estimation affichée au client au moment de la demande (copie figée du tarif).
+  estimatedParts   Int?
+  estimatedLabor   Int?
+  estimatedTotal   Int?
+  estimatedMinutes Int?
+  customerName     String?
+  customerPhone    String
+  customerId       String?
+  customer         Customer?           @relation(fields: [customerId], references: [id])
+  description      String?
+  photoKey         String?
+  status           RepairRequestStatus @default(NEW)
+  internalNote     String?
+  repairJobId      String?             @unique
+  repairJob        RepairJob?          @relation(fields: [repairJobId], references: [id])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// ───────────────────────────── Réparations : dossiers en atelier
+
+enum RepairStatus {
+  RECEIVED // Téléphone reçu
+  DIAGNOSING // Diagnostic en cours
+  QUOTE_PENDING // Devis à confirmer
+  QUOTE_ACCEPTED // Devis accepté
+  WAITING_PARTS // En attente de pièces
+  IN_PROGRESS // Réparation en cours
+  COMPLETED // Réparation terminée
+  PICKED_UP // Téléphone récupéré
+  CANCELLED // Annulée
+}
+
+model RepairJob {
+  id               String           @id @default(cuid())
+  number           String           @unique
+  // Code de suivi aléatoire remis au client (consultation et décision sur le devis).
+  trackingCode     String
+  customerId       String
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  brandName        String
+  phoneModelId     String?
+  phoneModel       PhoneModel?      @relation(fields: [phoneModelId], references: [id])
+  modelName        String
+  imeiEncrypted    String?
+  imeiLast4        String?
+  repairTypeId     String?
+  repairType       RepairType?      @relation(fields: [repairTypeId], references: [id])
+  reportedIssue    String
+  diagnosis        String?
+  workDone         String?
+  technicianId     String?
+  technician       User?            @relation("RepairTechnician", fields: [technicianId], references: [id])
+  status           RepairStatus     @default(RECEIVED)
+  receivedAt       DateTime         @default(now())
+  dueAt            DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  // Remise du téléphone au client : information distincte du statut du dossier.
+  deviceReturnedAt DateTime?
+  billedAmount     Int              @default(0)
+  consumablesCost  Int              @default(0)
+  otherDirectCosts Int              @default(0)
+  otherCostsNote   String?
+  amountPaid       Int              @default(0)
+  paymentStatus    SettlementStatus @default(UNPAID)
+  internalNotes    String?
+  createdById      String
+  createdBy        User             @relation("RepairCreatedBy", fields: [createdById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  request      RepairRequest?
+  parts        RepairPart[]
+  history      RepairStatusHistory[]
+  quotes       RepairQuote[]
+  payments     Payment[]
+  review       Review?
+  reviewTokens ReviewVerificationToken[]
+
+  @@index([status])
+  @@index([completedAt])
+  @@index([receivedAt])
+  @@index([customerId])
+}
+
+enum PartSource {
+  STOCK
+  EXTERNAL // achetée spécifiquement pour la réparation, hors stock
+}
+
+enum PartStatus {
+  USED
+  RETURNED // retirée de la réparation (remise en stock si elle en provenait)
+}
+
+model RepairPart {
+  id          String     @id @default(cuid())
+  repairJobId String
+  repairJob   RepairJob  @relation(fields: [repairJobId], references: [id])
+  source      PartSource
+  productId   String?
+  product     Product?   @relation(fields: [productId], references: [id])
+  label       String
+  sku         String?
+  quantity    Int
+  // Coût unitaire figé au moment de l'utilisation (coût moyen du stock ou prix d'achat externe).
+  unitCost    Int
+  totalCost   Int
+  status      PartStatus @default(USED)
+  returnedAt  DateTime?
+  returnNote  String?
+  addedById   String
+  addedBy     User       @relation(fields: [addedById], references: [id])
+  createdAt   DateTime   @default(now())
+
+  @@index([repairJobId])
+}
+
+model RepairStatusHistory {
+  id          String        @id @default(cuid())
+  repairJobId String
+  repairJob   RepairJob     @relation(fields: [repairJobId], references: [id])
+  // STATUS, QUOTE, PART, PAYMENT, PRICE, DEVICE, NOTE, REVIEW
+  type        String
+  fromStatus  RepairStatus?
+  toStatus    RepairStatus?
+  message     String
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@index([repairJobId, createdAt])
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REFUSED
+  SUPERSEDED
+}
+
+model RepairQuote {
+  id              String      @id @default(cuid())
+  repairJobId     String
+  repairJob       RepairJob   @relation(fields: [repairJobId], references: [id])
+  version         Int
+  amount          Int
+  details         String
+  durationMinutes Int?
+  status          QuoteStatus @default(PENDING)
+  decidedAt       DateTime?
+  // CUSTOMER (en ligne) ou STAFF (accord oral enregistré en boutique)
+  decidedVia      String?
+  createdById     String
+  createdBy       User        @relation(fields: [createdById], references: [id])
+  createdAt       DateTime    @default(now())
+
+  @@unique([repairJobId, version])
+}
+
+// ───────────────────────────── Commandes et ventes
+
+enum OrderStatus {
+  PENDING // En attente de confirmation
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderChannel {
+  ONLINE
+  IN_STORE
+}
+
+enum FulfillmentMethod {
+  PICKUP
+  DELIVERY
+}
+
+enum PaymentPreference {
+  PAY_IN_STORE
+  CASH_ON_DELIVERY
+  TMONEY
+  FLOOZ
+}
+
+model Order {
+  id                String            @id @default(cuid())
+  number            String            @unique
+  // Jeton aléatoire permettant au client de consulter sa commande.
+  accessToken       String            @unique
+  channel           OrderChannel
+  status            OrderStatus       @default(PENDING)
+  customerId        String?
+  customer          Customer?         @relation(fields: [customerId], references: [id])
+  customerName      String
+  customerPhone     String
+  fulfillment       FulfillmentMethod @default(PICKUP)
+  deliveryAddress   String?
+  paymentPreference PaymentPreference
+  comment           String?
+  subtotal          Int
+  deliveryFee       Int               @default(0)
+  total             Int
+  amountPaid        Int               @default(0)
+  paymentStatus     SettlementStatus  @default(UNPAID)
+  confirmedAt       DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdById       String?
+  createdBy         User?             @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  items        OrderItem[]
+  payments     Payment[]
+  history      OrderStatusHistory[]
+  review       Review?
+  reviewTokens ReviewVerificationToken[]
+  returns      OrderReturn[]
+
+  @@index([status, createdAt])
+  @@index([completedAt])
+}
+
+model OrderItem {
+  id               String     @id @default(cuid())
+  orderId          String
+  order            Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String?
+  product          Product?   @relation(fields: [productId], references: [id])
+  usedPhoneId      String?
+  usedPhone        UsedPhone? @relation(fields: [usedPhoneId], references: [id])
+  label            String
+  sku              String
+  quantity         Int
+  unitPrice        Int
+  lineTotal        Int
+  // Coût unitaire figé lors de la sortie de stock (coût moyen ou prix d'achat du téléphone).
+  unitCost         Int?
+  returnedQuantity Int        @default(0)
+
+  @@index([productId])
+  @@index([usedPhoneId])
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(cuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  note       String?
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// Retour d'articles après une vente terminée : annule le chiffre d'affaires
+// et, si l'article est remis en stock, le coût correspondant.
+model OrderReturn {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  orderItemId String
+  quantity    Int
+  amount      Int
+  costAmount  Int
+  restocked   Boolean
+  reason      String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ───────────────────────────── Paiements (commandes et réparations)
+
+enum PaymentMethod {
+  CASH
+  TMONEY
+  FLOOZ
+  CARD
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentKind {
+  PAYMENT
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING // initié auprès d'un prestataire, non confirmé
+  CONFIRMED
+  FAILED
+  CANCELLED // écriture annulée (correction)
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  kind              PaymentKind   @default(PAYMENT)
+  method            PaymentMethod
+  status            PaymentStatus
+  // Toujours positif ; le sens est donné par `kind`.
+  amount            Int
+  orderId           String?
+  order             Order?        @relation(fields: [orderId], references: [id])
+  repairJobId       String?
+  repairJob         RepairJob?    @relation(fields: [repairJobId], references: [id])
+  // MANUAL (saisi par l'équipe) ou nom du prestataire (PAYGATE…)
+  provider          String        @default("MANUAL")
+  providerReference String?
+  // Référence de transaction communiquée par le client ou l'opérateur.
+  externalReference String?
+  payerPhone        String?
+  note              String?
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  recordedById      String?
+  recordedBy        User?         @relation(fields: [recordedById], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([provider, providerReference])
+  @@index([status, confirmedAt])
+  @@index([orderId])
+  @@index([repairJobId])
+}
+
+// ───────────────────────────── Dépenses générales
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  INTERNET
+  TRANSPORT
+  SALARIES
+  EQUIPMENT_MAINTENANCE
+  SUPPLIES
+  OTHER
+}
+
+enum ExpenseStatus {
+  ACTIVE
+  VOIDED
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  label         String
+  category      ExpenseCategory
+  amount        Int
+  expenseDate   DateTime
+  paymentMethod PaymentMethod
+  receiptKey    String?
+  comment       String?
+  status        ExpenseStatus   @default(ACTIVE)
+  voidedAt      DateTime?
+  voidReason    String?
+  voidedById    String?
+  voidedBy      User?           @relation("ExpenseVoidedBy", fields: [voidedById], references: [id])
+  // Correction : la nouvelle écriture référence celle qu'elle remplace.
+  replacesId    String?         @unique
+  replaces      Expense?        @relation("ExpenseCorrection", fields: [replacesId], references: [id])
+  replacedBy    Expense?        @relation("ExpenseCorrection")
+  createdById   String
+  createdBy     User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime        @default(now())
+
+  @@index([status, expenseDate])
+}
+
+// ───────────────────────────── Avis clients
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  FLAGGED
+}
+
+enum ReviewService {
+  REPAIR
+  ACCESSORY_PURCHASE
+  PHONE_PURCHASE
+  OTHER
+}
+
+model Review {
+  id             String        @id @default(cuid())
+  rating         Int
+  ratingRepair   Int?
+  ratingWelcome  Int?
+  ratingValue    Int?
+  comment        String?
+  // Prénom ou pseudonyme facultatif choisi par le client.
+  displayName    String?
+  serviceType    ReviewService
+  status         ReviewStatus  @default(PENDING)
+  verified       Boolean       @default(false)
+  // Un dossier de réparation ou une vente ne peut porter qu'un seul avis.
+  repairJobId    String?       @unique
+  repairJob      RepairJob?    @relation(fields: [repairJobId], references: [id])
+  orderId        String?       @unique
+  order          Order?        @relation(fields: [orderId], references: [id])
+  moderatedAt    DateTime?
+  moderatedById  String?
+  moderatedBy    User?         @relation(fields: [moderatedById], references: [id])
+  moderationNote String?
+  // Réponse publique de la boutique (le contenu du client n'est jamais modifié).
+  shopReply      String?
+  ipHash         String?
+  createdAt      DateTime      @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// Code d'avis : remis au client pour une réparation ou une vente ; sans code, pas d'avis.
+model ReviewVerificationToken {
+  id            String     @id @default(cuid())
+  repairJobId   String?
+  repairJob     RepairJob? @relation(fields: [repairJobId], references: [id])
+  orderId       String?
+  order         Order?     @relation(fields: [orderId], references: [id])
+  // Empreinte HMAC du code (recherche) ; le code est aussi conservé chiffré pour rester affichable dans l'administration.
+  codeHash      String     @unique
+  codeEncrypted String?
+  createdById   String
+  createdBy     User       @relation(fields: [createdById], references: [id])
+  createdAt     DateTime   @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  usedAt        DateTime?
+
+  @@index([repairJobId])
+  @@index([orderId])
+}

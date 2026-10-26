@@ -1,0 +1,19 @@
+{
+  "name": "yameogo",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.18"
+  },
+  "scripts": {
+    "db:start": "./scripts/dev-db.sh start",
+    "db:stop": "./scripts/dev-db.sh stop",
+    "dev": "pnpm -r --parallel --stream dev",
+    "dev:backend": "pnpm --filter @yameogo/backend dev",
+    "dev:frontend": "pnpm --filter @yameogo/frontend dev",
+    "dev:admin": "pnpm --filter @yameogo/admin dev",
+    "build": "pnpm --filter @yameogo/backend build && pnpm --filter @yameogo/frontend build && pnpm --filter @yameogo/admin build",
+    "test": "pnpm --filter @yameogo/backend test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

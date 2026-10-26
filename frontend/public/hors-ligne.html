@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f2147">
+<title>Hors connexion · YAMEOGO</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 24px; background: #0f2147; color: #fff; font: 15px/1.5 'IBM Plex Sans', system-ui, sans-serif; text-align: center; }
+  .card { width: 100%; max-width: 360px; padding: 32px; border-radius: 24px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .25); box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), 0 10px 30px -12px rgb(8 18 40 / .45); }
+  .logo { font: 600 26px/1 Newsreader, Georgia, serif; } .logo small { display: block; margin-top: 6px; font: 500 11px/1 system-ui, sans-serif; letter-spacing: .28em; color: rgb(255 255 255 / .75); }
+  h1 { margin-top: 28px; font: 500 32px/1.05 Newsreader, Georgia, serif; }
+  p { margin-top: 10px; color: rgb(255 255 255 / .8); }
+  .actions { display: grid; gap: 12px; margin-top: 28px; }
+  a, button { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 999px; font: 500 15px system-ui, sans-serif; color: #fff; text-decoration: none; cursor: pointer; }
+  button { background: rgb(255 255 255 / .14); border: 1px solid rgb(255 255 255 / .3); }
+  a { background: #1f9d55; border: 0; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">TH<small>STORE</small></div>
+    <h1>Pas de connexion</h1>
+    <p>Vérifiez votre réseau, puis réessayez.</p>
+    <div class="actions">
+      <button type="button" onclick="location.reload()">Réessayer</button>
+      <a href="https://wa.me/22870858801?text=Bonjour%20TH%20Store%2C">Écrire sur WhatsApp</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+packages:
+  - backend
+  - frontend
+  - admin
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - prisma
+  - sharp
+  - "@swc/core"
+  - "@nestjs/core"
+  - unrs-resolver

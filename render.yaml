@@ -1,0 +1,51 @@
+# Blueprint Render — API NestJS + PostgreSQL managé.
+# Les secrets (sync: false) sont à saisir dans le tableau de bord Render.
+services:
+  - type: web
+    name: yameogo-backend
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @yameogo/backend build
+    startCommand: pnpm --filter @yameogo/backend start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yameogo-db
+          property: connectionString
+      # URL du site (projet Vercel « frontend »), sans / final. Ex. https://yameogo.vercel.app
+      - key: WEB_ORIGIN
+        sync: false
+      # URL de l'administration (projet Vercel « admin »). Ex. https://yameogo-admin.vercel.app
+      - key: ADMIN_ORIGIN
+        sync: false
+      # URL de ce service Render. Ex. https://yameogo-backend.onrender.com
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: APP_SECRET
+        generateValue: true
+      # openssl rand -base64 32 — à conserver dans un coffre : sans elle, les IMEI sont illisibles.
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      # Les navigateurs passent par le relais /api de Vercel, puis par le proxy Render.
+      - key: TRUST_PROXY
+        value: "2"
+      # Photos sur Cloudinary (cloudinary://CLE_API:SECRET_API@NOM_DU_CLOUD) : le disque Render est effacé à chaque déploiement.
+      - key: CLOUDINARY_URL
+        sync: false
+      # Facultatif : laisser vide désactive le paiement mobile en ligne.
+      - key: PAYGATE_API_KEY
+        sync: false
+
+databases:
+  - name: yameogo-db
+    plan: basic-256mb
+    region: frankfurt
+    postgresMajorVersion: "16"
