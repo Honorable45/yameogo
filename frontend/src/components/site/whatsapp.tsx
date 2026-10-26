@@ -14,7 +14,7 @@ export function WhatsAppIcon({ className }: { className?: string }) {
  * Lien vers WhatsApp, présenté comme une action principale.
  * Sans numéro configuré (`href` nul), le bouton est désactivé et l'explication s'affiche.
  */
-export function WhatsAppButton({ href, children, size = 'lg', className, variant = 'solid' }: { href: string | null; children: ReactNode; size?: 'md' | 'lg'; className?: string; variant?: 'solid' | 'glass' }) {
+export function WhatsAppButton({ href, children, size = 'lg', className, variant = 'solid', inverted }: { href: string | null; children: ReactNode; size?: 'md' | 'lg'; className?: string; variant?: 'solid' | 'glass'; inverted?: boolean }) {
   if (!href) {
     return (
       <span className={cn('inline-flex flex-col gap-1', className)}>
@@ -22,7 +22,7 @@ export function WhatsAppButton({ href, children, size = 'lg', className, variant
           <WhatsAppIcon />
           {children}
         </span>
-        <span className="text-[12.5px] text-muted">{NO_WHATSAPP_MESSAGE}</span>
+        <span className={cn('text-[12.5px]', inverted ? 'text-white/85' : 'text-muted')}>{NO_WHATSAPP_MESSAGE}</span>
       </span>
     );
   }

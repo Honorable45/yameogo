@@ -111,11 +111,19 @@ export function ProductCard({ product: p, priority, compact }: { product: Catalo
   );
 }
 
+/** `compact` : sur mobile, rangée qui défile horizontalement (une carte et demie visible) au lieu d'une longue grille. */
 export function ProductGrid({ products, className, compact }: { products: CatalogCard[]; className?: string; compact?: boolean }) {
   return (
-    <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5', className)}>
+    <ul
+      className={cn(
+        compact
+          ? 'scrollbar-none -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-4 lg:gap-5'
+          : 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5',
+        className,
+      )}
+    >
       {products.map((p, i) => (
-        <li key={p.id} className="flex min-w-0">
+        <li key={p.id} className={cn('flex min-w-0', compact && 'w-[44%] shrink-0 snap-start sm:w-auto')}>
           <ProductCard product={p} priority={i < 4} compact={compact} />
         </li>
       ))}

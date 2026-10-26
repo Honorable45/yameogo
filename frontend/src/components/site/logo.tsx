@@ -15,8 +15,9 @@ export function Logo({ logoUrl, name = 'Yameogo Smart Tech', inverted, className
       ) : (
         <span className={cn('flex items-center uppercase leading-none', inverted ? 'text-paper' : 'text-ink')}>
           <span className="text-[17px] font-semibold tracking-[0.2em]">{first}</span>
-          <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre" aria-hidden="true" />
-          {rest.length > 0 && <span className={cn('text-[10.5px] font-medium tracking-[0.3em]', inverted ? 'text-paper/70' : 'text-ink-2')}>{rest.join(' ')}</span>}
+          {/* Très petits écrans : seul le premier mot reste, pour laisser la place au panier. */}
+          <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre max-[359px]:hidden" aria-hidden="true" />
+          {rest.length > 0 && <span className={cn('whitespace-nowrap text-[10.5px] max-[359px]:hidden font-medium tracking-[0.3em]', inverted ? 'text-paper/70' : 'text-ink-2')}>{rest.join(' ')}</span>}
         </span>
       )}
     </Link>

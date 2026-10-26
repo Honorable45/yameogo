@@ -31,7 +31,7 @@ const DEFAULT_HERO = 'https://images.unsplash.com/photo-1556656793-08538906a9f8'
 
 /** Boutons de l'accueil : toujours sur une ligne, en verre dépoli (« liquid glass »). */
 const heroBtn =
-  'inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-transform duration-300 hover:-translate-y-0.5 sm:h-12 sm:px-6 sm:text-[15px]';
+  'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-transform duration-300 hover:-translate-y-0.5 min-[380px]:h-11 min-[380px]:px-3.5 min-[380px]:text-[13.5px] sm:h-12 sm:px-6 sm:text-[15px]';
 
 const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
 
@@ -57,17 +57,17 @@ export default async function HomePage() {
         {/* Photo de fond, éclaircie pour que le logo et le slogan restent lisibles. */}
         <Image src={settings?.heroImageUrl || DEFAULT_HERO} alt={settings?.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />
         <span className="pointer-events-none absolute inset-0 bg-paper/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-paper/70 lg:via-paper/80 lg:to-paper/90" aria-hidden="true" />
-        <div className="container-page relative grid min-h-[88svh] items-center gap-6 pb-14 pt-36 lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
+        <div className="container-page relative grid items-center gap-2 pb-10 pt-32 sm:gap-6 sm:pb-14 sm:pt-36 lg:min-h-[88svh] lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
           <div className="flex justify-center lg:col-span-6 lg:justify-start">
-            <HeroLogoAnimation className="w-full max-w-[420px] sm:max-w-[500px] lg:max-w-[560px]" />
+            <HeroLogoAnimation className="w-full max-w-[330px] sm:max-w-[480px] lg:max-w-[560px]" />
           </div>
           <div className="text-center lg:col-span-6 lg:justify-self-start lg:rounded-[28px] lg:p-9 lg:text-left lg:glass-light">
             <h1 className="display text-balance text-[30px] leading-[1.1] text-navy sm:text-[40px] lg:text-[48px]">
               <span className="sr-only">{shopName} — </span>
               <Reveal text={tagline} start={taglineStart} step={240} />
             </h1>
-            <span aria-hidden="true" className="reveal-line mx-auto mt-7 block h-[3px] w-20 origin-left rounded-full bg-gradient-to-r from-ochre to-[#f9a51a] lg:mx-0" style={{ animationDelay: `${taglineEnd - 200}ms` }} />
-            <nav aria-label="Rubriques" className="reveal-soft mt-7 flex justify-center gap-2 sm:gap-3 lg:justify-start" style={{ animationDelay: `${taglineEnd}ms` }}>
+            <span aria-hidden="true" className="reveal-line mx-auto mt-5 block sm:mt-7 h-[3px] w-20 origin-left rounded-full bg-gradient-to-r from-ochre to-[#f9a51a] lg:mx-0" style={{ animationDelay: `${taglineEnd - 200}ms` }} />
+            <nav aria-label="Rubriques" className="reveal-soft mt-6 flex justify-center gap-1.5 min-[380px]:gap-2 sm:mt-7 sm:gap-3 lg:justify-start" style={{ animationDelay: `${taglineEnd}ms` }}>
               <Link href="/telephones" className={`${heroBtn} glass-dark text-white`}>
                 Smartphones
               </Link>

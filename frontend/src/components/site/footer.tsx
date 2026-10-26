@@ -10,8 +10,8 @@ import { SocialLinks } from './social';
 export function SiteFooter({ settings: s }: { settings: PublicSettings | null }) {
   const address = [s?.addressLine, s?.city].filter(Boolean).join(', ');
   return (
-    <footer className="mt-24 bg-navy text-paper">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-3">
+    <footer className="mt-16 bg-navy text-paper sm:mt-24">
+      <div className="container-page grid gap-8 py-10 sm:gap-10 sm:py-14 md:grid-cols-3">
         <div>
           <Logo logoUrl={null} name={s?.shopName} inverted />
           <SocialLinks settings={s} className="mt-6" />

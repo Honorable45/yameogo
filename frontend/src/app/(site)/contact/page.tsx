@@ -65,7 +65,7 @@ export default async function ContactPage() {
               )}
             </ul>
             <div className="mt-6 flex flex-wrap items-center gap-2">
-              <WhatsAppButton href={waLink(s?.whatsapp, `Bonjour ${shopName},`)} size="md">
+              <WhatsAppButton href={waLink(s?.whatsapp, `Bonjour ${shopName},`)} size="md" inverted>
                 Écrire sur WhatsApp
               </WhatsAppButton>
               {s?.phone && (
