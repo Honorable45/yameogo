@@ -80,10 +80,12 @@ function capacities(p: CatalogCard) {
   return parts.filter(Boolean).join(' · ');
 }
 
-export function ProductCard({ product: p, priority }: { product: CatalogCard; priority?: boolean }) {
+/** `compact` : nom et prix seulement (accueil), sans capacités, état ni couleurs. */
+export function ProductCard({ product: p, priority, compact }: { product: CatalogCard; priority?: boolean; compact?: boolean }) {
   const href = `/${p.kind === 'PHONE' ? 'telephones' : 'accessoires'}/${p.slug}`;
   const off = p.priceFrom !== null ? discount(p.priceFrom, p.compareAtPrice) : null;
   const phone = p.kind === 'PHONE';
+  const details = phone && !compact;
   return (
     <article className={card}>
       <Link href={href} className="relative block" tabIndex={-1} aria-hidden="true">
@@ -100,21 +102,21 @@ export function ProductCard({ product: p, priority }: { product: CatalogCard; pr
             {p.name}
           </Link>
         </h3>
-        {phone && capacities(p) && <p className="mt-1 text-[12.5px] text-muted">{capacities(p)}</p>}
-        {phone && p.conditions.length > 0 && <p className="mt-0.5 text-[12.5px] text-muted">{p.conditions.map((c) => CONDITION_LABELS[c]).join(' ou ')}</p>}
-        <ColorDots colors={p.colors} className="mt-2.5" />
+        {details && capacities(p) && <p className="mt-1 text-[12.5px] text-muted">{capacities(p)}</p>}
+        {details && p.conditions.length > 0 && <p className="mt-0.5 text-[12.5px] text-muted">{p.conditions.map((c) => CONDITION_LABELS[c]).join(' ou ')}</p>}
+        {!compact && <ColorDots colors={p.colors} className="mt-2.5" />}
         {p.priceFrom !== null && <PriceTag price={p.priceFrom} compareAt={p.compareAtPrice} from={p.priceTo !== null && p.priceTo > p.priceFrom} className="mt-auto pt-3" />}
       </div>
     </article>
   );
 }
 
-export function ProductGrid({ products, className }: { products: CatalogCard[]; className?: string }) {
+export function ProductGrid({ products, className, compact }: { products: CatalogCard[]; className?: string; compact?: boolean }) {
   return (
     <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5', className)}>
       {products.map((p, i) => (
         <li key={p.id} className="flex min-w-0">
-          <ProductCard product={p} priority={i < 4} />
+          <ProductCard product={p} priority={i < 4} compact={compact} />
         </li>
       ))}
     </ul>

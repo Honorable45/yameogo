@@ -17,7 +17,7 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
       {text.split(' ').map((word, i) => (
         <span key={i}>
           {/* L'espace reste hors du bloc animé : un bloc « inline-block » absorberait l'espace final. */}
-          <span className="reveal-word" style={{ animationDelay: `${start + i * step}ms` }}>
+          <span className="reveal-soft inline-block" style={{ animationDelay: `${start + i * step}ms` }}>
             {word}
           </span>{' '}
         </span>
@@ -28,6 +28,10 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
 
 /** Photo d'accueil par défaut (Unsplash, licence libre), remplaçable dans l'admin : Paramètres › Photos du site. */
 const DEFAULT_HERO = 'https://images.unsplash.com/photo-1556656793-08538906a9f8';
+
+/** Boutons de l'accueil : toujours sur une ligne, en verre dépoli (« liquid glass »). */
+const heroBtn =
+  'inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-transform duration-300 hover:-translate-y-0.5 sm:h-12 sm:px-6 sm:text-[15px]';
 
 const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
 
@@ -44,7 +48,7 @@ export default async function HomePage() {
   const tagline = settings?.tagline || 'La qualité au meilleur prix';
   // Le slogan s'écrit pendant que le logo se compose, puis les boutons apparaissent.
   const taglineStart = 900;
-  const taglineEnd = taglineStart + tagline.split(' ').length * 150 + 300;
+  const taglineEnd = taglineStart + tagline.split(' ').length * 240 + 700;
 
   return (
     <>
@@ -57,26 +61,26 @@ export default async function HomePage() {
           <div className="flex justify-center lg:col-span-6 lg:justify-start">
             <HeroLogoAnimation className="w-full max-w-[420px] sm:max-w-[500px] lg:max-w-[560px]" />
           </div>
-          <div className="text-center lg:col-span-6 lg:pl-6 lg:text-left">
-            <h1 className="display text-[40px] leading-[1.05] text-navy sm:text-[56px] lg:text-[68px]">
+          <div className="text-center lg:col-span-6 lg:justify-self-start lg:rounded-[28px] lg:p-9 lg:text-left lg:glass-light">
+            <h1 className="display text-balance text-[30px] leading-[1.1] text-navy sm:text-[40px] lg:text-[48px]">
               <span className="sr-only">{shopName} — </span>
-              <Reveal text={tagline} start={taglineStart} step={150} />
+              <Reveal text={tagline} start={taglineStart} step={240} />
             </h1>
             <span aria-hidden="true" className="reveal-line mx-auto mt-7 block h-[3px] w-20 origin-left rounded-full bg-gradient-to-r from-ochre to-[#f9a51a] lg:mx-0" style={{ animationDelay: `${taglineEnd - 200}ms` }} />
-            <nav aria-label="Rubriques" className="reveal-word mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={{ animationDelay: `${taglineEnd}ms` }}>
-              <Link href="/telephones" className="inline-flex h-12 items-center rounded-full bg-navy px-7 text-[15.5px] font-medium text-white shadow-card transition-transform hover:-translate-y-0.5">
+            <nav aria-label="Rubriques" className="reveal-soft mt-7 flex justify-center gap-2 sm:gap-3 lg:justify-start" style={{ animationDelay: `${taglineEnd}ms` }}>
+              <Link href="/telephones" className={`${heroBtn} glass-dark text-white`}>
                 Smartphones
               </Link>
-              <Link href="/accessoires" className="inline-flex h-12 items-center rounded-full border border-navy/25 bg-surface px-7 text-[15.5px] font-medium text-navy transition-colors hover:border-navy">
+              <Link href="/accessoires" className={`${heroBtn} glass-light text-navy`}>
                 Accessoires
               </Link>
               {promos.length > 0 && (
-                <Link href="/promotions" className="inline-flex h-12 items-center rounded-full border border-ochre/40 bg-ochre-soft px-7 text-[15.5px] font-medium text-ochre-ink transition-colors hover:border-ochre">
+                <Link href="/promotions" className={`${heroBtn} glass-light !bg-[rgb(253_234_221/0.72)] text-ochre-ink`}>
                   Promotions
                 </Link>
               )}
             </nav>
-            <div className="reveal-word mt-6" style={{ animationDelay: `${taglineEnd + 250}ms` }}>
+            <div className="reveal-soft mt-6" style={{ animationDelay: `${taglineEnd + 250}ms` }}>
               <SocialLinks settings={settings} tone="dark" className="justify-center lg:justify-start" />
             </div>
           </div>
@@ -102,7 +106,7 @@ export default async function HomePage() {
       {phones.length > 0 && (
         <section className="container-page mt-12 sm:mt-16">
           <SectionHeading title="Smartphones" action={<MoreLink href="/telephones">Tous les smartphones</MoreLink>} />
-          <ProductGrid products={phones} className="mt-8" />
+          <ProductGrid products={phones} className="mt-8" compact />
         </section>
       )}
 
@@ -111,7 +115,7 @@ export default async function HomePage() {
         <section className="mt-16 bg-ochre-soft/60 py-14 sm:mt-24 sm:py-16">
           <div className="container-page">
             <SectionHeading title="Promotions" action={<MoreLink href="/promotions">Toutes les promotions</MoreLink>} />
-            <ProductGrid products={promos} className="mt-8" />
+            <ProductGrid products={promos} className="mt-8" compact />
           </div>
         </section>
       )}
@@ -120,7 +124,7 @@ export default async function HomePage() {
       {accessories.length > 0 && (
         <section className="container-page mt-16 sm:mt-24">
           <SectionHeading title="Accessoires" action={<MoreLink href="/accessoires">Tous les accessoires</MoreLink>} />
-          <ProductGrid products={accessories} className="mt-8" />
+          <ProductGrid products={accessories} className="mt-8" compact />
         </section>
       )}
 

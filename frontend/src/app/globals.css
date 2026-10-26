@@ -207,6 +207,17 @@
   animation: word-in 700ms var(--ease-out) forwards;
 }
 
+/* Apparition douce et lente : les mots se chevauchent en passant du flou au net (slogan de l'accueil). */
+@keyframes soft-in {
+  from { opacity: 0; transform: translateY(0.18em); filter: blur(14px); }
+  60% { filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@utility reveal-soft {
+  opacity: 0;
+  animation: soft-in 1600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
