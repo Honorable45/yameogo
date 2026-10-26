@@ -16,7 +16,7 @@ export function SiteFooter({ settings: s }: { settings: PublicSettings | null })
           <Logo logoUrl={null} name={s?.shopName} inverted />
           <SocialLinks settings={s} className="mt-6" />
           <InstallButton className="mt-5" />
-          <p className="num mt-4 text-[14px] text-paper/80">{formatPhone(s?.phone ?? '+22870858801')}</p>
+          {s?.phone && <p className="num mt-4 text-[14px] text-paper/80">{formatPhone(s.phone)}</p>}
           {address && <p className="mt-1 text-[14px] text-paper/70">{address}</p>}
           {directionsUrl(s) && (
             <a href={directionsUrl(s)!} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[14px] font-medium text-white underline underline-offset-4">
@@ -27,11 +27,12 @@ export function SiteFooter({ settings: s }: { settings: PublicSettings | null })
         <nav aria-label="Pied de page">
           <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-[14.5px]">
             {[
-              ['/boutique', 'Téléphones'],
-              ['/boutique?rayon=accessoires', 'Accessoires'],
-              ['/reparation', 'Devis'],
-              ['/boutique#contact', 'Contact'],
-              ['/avis', 'Avis'],
+              ['/telephones', 'Smartphones'],
+              ['/accessoires', 'Accessoires'],
+              ['/promotions', 'Promotions'],
+              ['/panier', 'Panier'],
+              ['/contact', 'Contact'],
+              ['/avis', 'Avis clients'],
             ].map(([href, label]) => (
               <li key={href}>
                 <Link href={href} className="text-paper/85 hover:text-white">

@@ -31,17 +31,11 @@ const config: NextConfig = {
     loaderFile: './src/lib/image-loader.ts',
   },
   async redirects() {
-    // Anciennes adresses « occasions » (liens déjà partagés) vers la rubrique Téléphones.
+    // Anciennes adresses héritées du modèle de départ : renvoyées vers les rubriques équivalentes.
     return [
-      // Téléphones et accessoires sont des rayons de la boutique ; les filtres de l'adresse sont conservés.
-      { source: '/telephones', destination: '/boutique', permanent: true },
-      { source: '/accessoires', destination: '/boutique?rayon=accessoires', permanent: true },
-      { source: '/occasions', destination: '/boutique?type=occasions', permanent: true },
-      { source: '/occasions/:slug', destination: '/telephones/:slug', permanent: true },
-      // Les accessoires ont quitté /boutique (devenue la présentation du magasin) ; le panier est remplacé par WhatsApp.
+      { source: '/boutique', destination: '/contact', permanent: true },
       { source: '/boutique/:slug', destination: '/accessoires/:slug', permanent: true },
-      { source: '/panier', destination: '/boutique', permanent: false },
-      { source: '/contact', destination: '/boutique', permanent: true },
+      { source: '/reparation', destination: '/telephones', permanent: true },
     ];
   },
   async rewrites() {

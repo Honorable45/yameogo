@@ -4,35 +4,14 @@ export interface ImageRef {
   id: string;
   url: string | null;
   alt: string;
+  color: string | null;
   width: number | null;
   height: number | null;
 }
 
 export type Availability = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
-
-export interface Compatibility {
-  brandId: string;
-  brand: string;
-  brandSlug: string;
-  modelId: string | null;
-  model: string | null;
-}
-
-export interface PublicProduct {
-  id: string;
-  slug: string;
-  sku: string;
-  name: string;
-  description: string;
-  price: number;
-  category: { id: string; name: string; slug: string };
-  images: ImageRef[];
-  compatibility: Compatibility[];
-  availability: Availability;
-  availableQuantity: number;
-  isDemo: boolean;
-  createdAt: string;
-}
+export type ProductKind = 'PHONE' | 'ACCESSORY';
+export type Condition = 'NEW' | 'USED';
 
 export interface Paginated<T> {
   items: T[];
@@ -42,48 +21,89 @@ export interface Paginated<T> {
   pageCount: number;
 }
 
-export interface ShopCategory {
+/** Carte du catalogue (une fiche produit et le résumé de ses configurations). */
+export interface CatalogCard {
   id: string;
+  slug: string;
+  kind: ProductKind;
   name: string;
-  slug: string;
-  description: string | null;
-  productCount: number;
-  imageUrl: string | null;
-}
-
-export interface ShopBrand {
-  id: string;
-  name: string;
-  slug: string;
-  models: { id: string; name: string; slug: string }[];
-}
-
-export type PhoneCondition = 'NEW' | 'IMPORTED' | 'USED';
-
-export interface PublicPhone {
-  id: string;
-  slug: string;
-  reference: string;
-  brand: { id: string; name: string; slug: string };
-  modelName: string;
-  condition: PhoneCondition;
-  conditionLabel: string;
-  title: string;
-  storageGb: number | null;
-  ramGb: number | null;
-  color: string | null;
-  grade: 'LIKE_NEW' | 'VERY_GOOD' | 'GOOD' | 'FAIR';
-  gradeLabel: string;
-  batteryHealth: number | null;
-  knownDefects: string | null;
-  includedAccessories: string | null;
-  description: string | null;
-  price: number;
-  warrantyMonths: number;
-  status: 'AVAILABLE' | 'RESERVED';
-  images: ImageRef[];
+  brand: { id: string; name: string; slug: string } | null;
+  category: { id: string; name: string; slug: string };
+  image: ImageRef | null;
+  priceFrom: number | null;
+  compareAtPrice: number | null;
+  priceTo: number | null;
+  onSale: boolean;
+  inStock: boolean;
+  colors: { name: string; hex: string | null }[];
+  ramGbs: number[];
+  storageGbs: number[];
+  conditions: Condition[];
+  variantCount: number;
+  featured: boolean;
   isDemo: boolean;
 }
+
+/** Configuration vendable (variante). */
+export interface Variant {
+  id: string;
+  sku: string;
+  label: string;
+  color: string | null;
+  colorHex: string | null;
+  ramGb: number | null;
+  storageGb: number | null;
+  condition: Condition | null;
+  optionValue: string | null;
+  price: number;
+  compareAtPrice: number | null;
+  availability: Availability;
+  availableQuantity: number;
+}
+
+export interface CatalogDetail extends CatalogCard {
+  description: string;
+  specs: { label: string; value: string }[];
+  optionName: string | null;
+  compatibleWith: string | null;
+  images: ImageRef[];
+  variants: Variant[];
+}
+
+export interface CatalogFacets {
+  brands: { slug: string; name: string }[];
+  categories: { slug: string; name: string }[];
+  rams: number[];
+  storages: number[];
+  conditions: Condition[];
+  price: { min: number; max: number } | null;
+  hasPromotions: boolean;
+}
+
+/** Ligne de panier vérifiée par le serveur (prix et disponibilité actuels). */
+export type CheckedLine =
+  | { variantId: string; available: false; issue: string; name?: undefined }
+  | {
+      variantId: string;
+      available: boolean;
+      issue: string | null;
+      maxQuantity: number;
+      kind: ProductKind;
+      name: string;
+      slug: string;
+      brand: string | null;
+      label: string;
+      sku: string;
+      color: string | null;
+      ramGb: number | null;
+      storageGb: number | null;
+      condition: Condition | null;
+      optionName: string | null;
+      optionValue: string | null;
+      unitPrice: number;
+      compareAtPrice: number | null;
+      image: ImageRef | null;
+    };
 
 export interface OpeningHour {
   dayOfWeek: number;
@@ -94,12 +114,11 @@ export interface OpeningHour {
 
 export interface PublicSettings {
   shopName: string;
+  siteUrl?: string;
   tagline: string | null;
   logoUrl: string | null;
   heroImageUrl: string | null;
   heroImageAlt: string | null;
-  repairImageUrl: string | null;
-  repairImageAlt: string | null;
   phonesImageUrl: string | null;
   phonesImageAlt: string | null;
   shopImageUrl: string | null;
@@ -121,7 +140,7 @@ export interface PublicSettings {
     publicationDirector: string | null;
     hostingProvider: string | null;
   };
-  repairWarrantyText: string | null;
+  deliveryInfo: string | null;
   openingHours: OpeningHour[];
   checkout: {
     deliveryEnabled: boolean;
@@ -133,23 +152,9 @@ export interface PublicSettings {
   };
 }
 
-export interface RepairCatalog {
-  brands: ShopBrand[];
-  types: { id: string; name: string; slug: string; description: string | null }[];
-}
-
-export interface RepairEstimate {
-  partsPrice: number;
-  laborPrice: number;
-  totalPrice: number;
-  durationMinutes: number | null;
-  conditions: string | null;
-}
-
 export interface PublicReview {
   id: string;
   rating: number;
-  ratingRepair: number | null;
   ratingWelcome: number | null;
   ratingValue: number | null;
   comment: string | null;
@@ -166,7 +171,6 @@ export interface ReviewsPage extends Paginated<PublicReview> {
     count: number;
     verifiedCount: number;
     average: number | null;
-    averageRepair: number | null;
     averageWelcome: number | null;
     averageValue: number | null;
   };

@@ -9,7 +9,7 @@ import type { PublicSettings, ReviewsPage } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Avis clients',
-  description: 'Les avis des clients de YAMEOGO. Les avis liés à une réparation sont vérifiés.',
+  description: 'Les avis des clients de YAMEOGO, donnés avec le code reçu lors de leur achat.',
   alternates: { canonical: '/avis' },
 };
 
@@ -19,7 +19,6 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   const s = data?.summary;
   const has = Boolean(s && s.count > 0 && s.average !== null);
   const details: [string, number | null | undefined][] = [
-    ['Réparation', s?.averageRepair],
     ['Accueil', s?.averageWelcome],
     ['Qualité-prix', s?.averageValue],
   ];

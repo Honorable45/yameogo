@@ -1,17 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { Store } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { useCartCount } from '@/lib/cart';
 import { cn } from '@/lib/cn';
 import { waLink } from '@/lib/whatsapp';
 import { Logo } from './logo';
 import { WhatsAppIcon } from './whatsapp';
 
 const NAV = [
-  { href: '/', label: 'Accueil' },
-  { href: '/reparation', label: 'Devis' },
-  { href: '/avis', label: 'Avis' },
+  { href: '/telephones', label: 'Smartphones', short: 'Téléphones' },
+  { href: '/accessoires', label: 'Accessoires', short: 'Accessoires' },
+  { href: '/promotions', label: 'Promotions', short: 'Promos' },
+  { href: '/contact', label: 'Contact', short: 'Contact' },
 ];
 
 /**
@@ -20,7 +22,9 @@ const NAV = [
  */
 export function SiteHeader({ logoUrl, shopName, whatsapp }: { logoUrl: string | null; shopName: string; whatsapp: string | null }) {
   const pathname = usePathname();
-  const active = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href)) || (href === '/boutique' && /^\/(telephones|accessoires)/.test(pathname));
+  const count = useCartCount();
+  const active = (href: string) => pathname.startsWith(href);
+  const contact = waLink(whatsapp, `Bonjour ${shopName},`);
 
   const links = (compact: boolean) =>
     NAV.map((item) => (
@@ -34,7 +38,7 @@ export function SiteHeader({ logoUrl, shopName, whatsapp }: { logoUrl: string | 
             active(item.href) ? 'bg-navy font-medium text-white' : 'text-ink-2 hover:bg-white/80 hover:text-ink',
           )}
         >
-          {item.label}
+          {compact ? item.short : item.label}
         </Link>
       </li>
     ));
@@ -49,17 +53,21 @@ export function SiteHeader({ logoUrl, shopName, whatsapp }: { logoUrl: string | 
           </nav>
           <div className="flex items-center gap-1.5">
             <Link
-              href="/boutique"
-              aria-current={active('/boutique') ? 'page' : undefined}
-              className={cn('inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors', active('/boutique') ? 'bg-navy text-white' : 'glass-dark text-white hover:bg-navy')}
+              href="/panier"
+              aria-label={`Panier${count ? ` : ${count} article${count > 1 ? 's' : ''}` : ''}`}
+              aria-current={active('/panier') ? 'page' : undefined}
+              className={cn('relative inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-medium text-white transition-colors', active('/panier') ? 'bg-navy' : 'glass-dark hover:bg-navy')}
             >
-              <Store className="size-[17px]" strokeWidth={1.8} />
-              Boutique
+              <ShoppingBag className="size-[17px]" strokeWidth={1.8} />
+              <span className="hidden sm:inline">Panier</span>
+              {count > 0 && <span className="num -mr-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11.5px] leading-none">{count}</span>}
             </Link>
-            <a href={waLink(whatsapp, 'Bonjour YAMEOGO,')} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#1f9d55] px-3 text-[14px] font-medium text-white transition-colors hover:bg-[#188247] sm:px-4">
-              <WhatsAppIcon className="size-[18px]" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
+            {contact && (
+              <a href={contact} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#1f9d55] px-3 text-[14px] font-medium text-white transition-colors hover:bg-[#188247] sm:px-4">
+                <WhatsAppIcon className="size-[18px]" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            )}
           </div>
         </div>
         <nav aria-label="Navigation principale" className="border-t border-white/70 px-1.5 py-1.5 lg:hidden">

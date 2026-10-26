@@ -5,7 +5,7 @@
  * - Photos (Cloudinary, Unsplash, API) : cache puis mise à jour en arrière-plan, 80 photos au plus.
  * - /api (sessions, avis, paiements) : jamais mis en cache.
  */
-const VERSION = 'v2';
+const VERSION = 'ymg-v1';
 const PAGES = `pages-${VERSION}`;
 const STATIC = `static-${VERSION}`;
 const IMAGES = `images-${VERSION}`;

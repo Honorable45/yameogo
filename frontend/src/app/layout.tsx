@@ -39,8 +39,8 @@ const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: 'YAMEOGO — Téléphones neufs, venus et d’occasion, accessoires et réparation', template: '%s · YAMEOGO' },
-  description: 'Téléphones neufs, venus d’Europe ou des États-Unis et d’occasion, accessoires pour toutes les marques et réparation avec devis en ligne. Prix en FCFA.',
+  title: { default: 'YAMEOGO — Smartphones et accessoires', template: '%s · YAMEOGO' },
+  description: 'Smartphones neufs et d’occasion, coques, chargeurs, écouteurs et accessoires. Choisissez votre configuration et commandez sur WhatsApp. Prix en FCFA.',
   openGraph: { type: 'website', locale: 'fr_FR', siteName: 'YAMEOGO' },
   icons: { icon: [{ url: '/icon.svg', type: 'image/svg+xml' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }], apple: '/apple-touch-icon.png' },
   // Application installée sur iPhone : ouverte sans barre d'adresse.
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f2147',
+  themeColor: '#15171c',
   width: 'device-width',
   initialScale: 1,
 };

@@ -10,8 +10,8 @@ export default function NotFound() {
         <nav className="mt-8 flex flex-wrap justify-center gap-2">
           {[
             ['/', 'Accueil'],
-            ['/boutique', 'Boutique'],
-            ['/reparation', 'Devis'],
+            ['/telephones', 'Smartphones'],
+            ['/promotions', 'Promotions'],
           ].map(([href, label]) => (
             <Link key={href} href={href} className="glass inline-flex h-11 items-center rounded-full px-5 text-[14.5px] font-medium hover:bg-white/25">
               {label}

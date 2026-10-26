@@ -1,41 +1,43 @@
-import { ArrowRight, BadgeCheck } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MoreLink, ProductCard, SectionHeading, Stars } from '@/components/site/catalog';
-import { PhonesShowcase } from '@/components/site/phones-showcase';
+import { MoreLink, ProductGrid, SectionHeading, Stars } from '@/components/site/catalog';
 import { SocialLinks } from '@/components/site/social';
 import { formatDate } from '@/lib/format';
 import { serverGet } from '@/lib/server-api';
-import type { PublicPhone, PublicProduct, PublicSettings, RepairCatalog, ReviewsPage } from '@/lib/types';
+import type { CatalogCard, CatalogFacets, Paginated, PublicSettings, ReviewsPage } from '@/lib/types';
 
 export const revalidate = 60;
-
-const TAGLINE = 'Réparer, acheter et habiller votre téléphone';
 
 /** Texte révélé mot par mot ; `start` = délai avant le premier mot (ms). */
 function Reveal({ text, start, step = 110 }: { text: string; start: number; step?: number }) {
   return (
     <>
       {text.split(' ').map((word, i) => (
-        <span key={i} className="reveal-word" style={{ animationDelay: `${start + i * step}ms` }}>
-          {word}
-          {' '}
+        <span key={i}>
+          {/* L'espace reste hors du bloc animé : un bloc « inline-block » absorberait l'espace final. */}
+          <span className="reveal-word" style={{ animationDelay: `${start + i * step}ms` }}>
+            {word}
+          </span>{' '}
         </span>
       ))}
     </>
   );
 }
 
+const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
+
 export default async function HomePage() {
-  const [settings, products, phones, catalog, reviews] = await Promise.all([
+  const [settings, phones, promos, accessories, facets, reviews] = await Promise.all([
     serverGet<PublicSettings>('/settings/public', 60),
-    serverGet<PublicProduct[]>('/shop/featured', 60),
-    serverGet<PublicPhone[]>('/shop/phones', 60),
-    serverGet<RepairCatalog>('/repair-catalog', 300),
+    list('kind=PHONE&available=1&pageSize=8'),
+    list('promo=1&available=1&pageSize=4'),
+    list('kind=ACCESSORY&available=1&pageSize=8'),
+    serverGet<CatalogFacets>('/shop/catalog-facets?kind=PHONE', 300),
     serverGet<ReviewsPage>('/reviews/public?pageSize=3', 300),
   ]);
-  const availablePhones = (phones ?? []).filter((p) => p.status === 'AVAILABLE');
-  const taglineEnd = 500 + TAGLINE.split(' ').length * 110;
+  const tagline = settings?.tagline || 'Smartphones et accessoires';
+  const taglineEnd = 500 + tagline.split(' ').length * 110;
 
   return (
     <>
@@ -43,24 +45,26 @@ export default async function HomePage() {
       <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-navy text-white">
         {settings?.heroImageUrl && <Image src={settings.heroImageUrl} alt={settings.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />}
         {/* Voile uniforme : lisibilité du texte sur n'importe quelle photo. */}
-        <span className="absolute inset-0 bg-navy/55" aria-hidden="true" />
+        <span className="absolute inset-0 bg-navy/60" aria-hidden="true" />
         <div className="relative px-6 pb-16 pt-40 text-center lg:pt-28">
-          <h1 className="display text-[64px] leading-none tracking-[-0.02em] sm:text-[104px] lg:text-[128px]">
+          <h1 className="text-[52px] font-semibold uppercase leading-none tracking-[0.14em] sm:text-[96px] lg:text-[120px]">
             <Reveal text={settings?.shopName ?? 'YAMEOGO'} start={100} step={180} />
           </h1>
           <p className="mx-auto mt-6 max-w-2xl font-serif text-[22px] italic leading-snug text-white/90 sm:text-[30px]">
-            <Reveal text={TAGLINE} start={500} />
+            <Reveal text={tagline} start={500} />
           </p>
           <nav aria-label="Rubriques" className="reveal-word mt-12 flex flex-wrap justify-center gap-3" style={{ animationDelay: `${taglineEnd}ms` }}>
-            {[
-              ['/boutique', 'Téléphones'],
-              ['/boutique?rayon=accessoires', 'Accessoires'],
-              ['/reparation', 'Devis'],
-            ].map(([href, label]) => (
-              <Link key={href} href={href} className="glass inline-flex h-12 items-center rounded-full px-7 text-[15.5px] font-medium text-white transition-colors hover:bg-white/25">
-                {label}
+            <Link href="/telephones" className="inline-flex h-12 items-center rounded-full bg-white px-7 text-[15.5px] font-medium text-navy transition-transform hover:-translate-y-0.5">
+              Smartphones
+            </Link>
+            <Link href="/accessoires" className="glass inline-flex h-12 items-center rounded-full px-7 text-[15.5px] font-medium text-white transition-colors hover:bg-white/25">
+              Accessoires
+            </Link>
+            {promos.length > 0 && (
+              <Link href="/promotions" className="glass inline-flex h-12 items-center rounded-full px-7 text-[15.5px] font-medium text-white transition-colors hover:bg-white/25">
+                Promotions
               </Link>
-            ))}
+            )}
           </nav>
           <div className="reveal-word mt-6" style={{ animationDelay: `${taglineEnd + 250}ms` }}>
             <SocialLinks settings={settings} className="justify-center" />
@@ -68,49 +72,46 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Téléphones */}
-      {availablePhones.length > 0 && (
-        <section className="container-page mt-16 sm:mt-24">
-          <SectionHeading title="Téléphones" action={<MoreLink href="/boutique">Tous les téléphones</MoreLink>} />
-          <PhonesShowcase phones={availablePhones} whatsapp={settings?.whatsapp ?? null} />
+      {/* Marques */}
+      {facets && facets.brands.length > 1 && (
+        <nav aria-label="Marques" className="container-page mt-10">
+          <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+            {facets.brands.map((b) => (
+              <li key={b.slug}>
+                <Link href={`/telephones?brand=${b.slug}`} className="inline-flex h-11 items-center whitespace-nowrap rounded-full border border-line-2 bg-surface px-5 text-[14.5px] font-medium hover:border-ink">
+                  {b.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      {/* Smartphones */}
+      {phones.length > 0 && (
+        <section className="container-page mt-12 sm:mt-16">
+          <SectionHeading title="Smartphones" action={<MoreLink href="/telephones">Tous les smartphones</MoreLink>} />
+          <ProductGrid products={phones} className="mt-8" />
+        </section>
+      )}
+
+      {/* Promotions */}
+      {promos.length > 0 && (
+        <section className="mt-16 bg-ochre-soft/60 py-14 sm:mt-24 sm:py-16">
+          <div className="container-page">
+            <SectionHeading title="Promotions" action={<MoreLink href="/promotions">Toutes les promotions</MoreLink>} />
+            <ProductGrid products={promos} className="mt-8" />
+          </div>
         </section>
       )}
 
       {/* Accessoires */}
-      {products && products.length > 0 && (
+      {accessories.length > 0 && (
         <section className="container-page mt-16 sm:mt-24">
-          <SectionHeading title="Accessoires" action={<MoreLink href="/boutique?rayon=accessoires">Tous les accessoires</MoreLink>} />
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
-            {products.slice(0, 8).map((p) => (
-              <ProductCard key={p.id} product={p} whatsapp={settings?.whatsapp} />
-            ))}
-          </div>
+          <SectionHeading title="Accessoires" action={<MoreLink href="/accessoires">Tous les accessoires</MoreLink>} />
+          <ProductGrid products={accessories} className="mt-8" />
         </section>
       )}
-
-      {/* Devis */}
-      <section className="relative mt-20 overflow-hidden bg-navy text-white sm:mt-28">
-        {settings?.repairImageUrl && <Image src={settings.repairImageUrl} alt="" fill sizes="100vw" className="object-cover" />}
-        <span className="absolute inset-0 bg-navy/65" aria-hidden="true" />
-        <div className="container-page relative py-20 sm:py-28">
-          <div className="glass mx-auto max-w-3xl rounded-3xl p-6 text-center sm:p-10">
-            <h2 className="display text-[34px] sm:text-[46px]">Devis de réparation</h2>
-            <p className="mt-2 text-[15.5px] text-white/80">Choisissez votre marque.</p>
-            {catalog && (
-              <ul className="mt-7 flex flex-wrap justify-center gap-2" aria-label="Marques">
-                {[...catalog.brands.map((b) => ({ href: `/reparation?marque=${b.slug}`, label: b.name })), { href: '/reparation?marque=autre', label: 'Autre' }].map((b) => (
-                  <li key={b.href}>
-                    <Link href={b.href} className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14.5px] font-medium text-navy transition-transform hover:-translate-y-0.5">
-                      {b.label}
-                      <ArrowRight className="size-4 text-ochre" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Avis */}
       {reviews && reviews.summary.count > 0 && reviews.summary.average !== null && (

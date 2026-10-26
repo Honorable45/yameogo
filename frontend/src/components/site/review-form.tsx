@@ -36,7 +36,7 @@ function RatingInput({ label, value, onChange, required }: { label: string; valu
   );
 }
 
-type Checked = { serviceType: 'REPAIR' | 'ACCESSORY_PURCHASE' | 'PHONE_PURCHASE'; subject: string };
+type Checked = { serviceType: 'ACCESSORY_PURCHASE' | 'PHONE_PURCHASE'; subject: string };
 
 /**
  * Avis client en deux temps : le code remis par la boutique (obligatoire), puis la note.
@@ -48,7 +48,6 @@ export function ReviewForm({ initialCode }: { initialCode: string }) {
   const [checking, setChecking] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
-  const [ratingRepair, setRatingRepair] = useState(0);
   const [ratingWelcome, setRatingWelcome] = useState(0);
   const [ratingValue, setRatingValue] = useState(0);
   const [comment, setComment] = useState('');
@@ -82,7 +81,6 @@ export function ReviewForm({ initialCode }: { initialCode: string }) {
     try {
       await api.post('/reviews', {
         rating,
-        ratingRepair: ratingRepair || undefined,
         ratingWelcome: ratingWelcome || undefined,
         ratingValue: ratingValue || undefined,
         comment: comment.trim() || undefined,
@@ -118,7 +116,7 @@ export function ReviewForm({ initialCode }: { initialCode: string }) {
         }}
         className="space-y-5"
       >
-        <Field label="Votre code d’avis" error={codeError} hint="Remis par YAMEOGO après votre réparation ou votre achat (message WhatsApp, ticket ou QR code).">
+        <Field label="Votre code d’avis" error={codeError} hint="Imprimé sur votre ticket de caisse ou envoyé par la boutique sur WhatsApp après votre achat.">
           {(p) => <Input {...p} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} required autoComplete="off" autoCapitalize="characters" className="font-mono text-[18px] uppercase tracking-[0.2em]" maxLength={16} placeholder="ABCD-2345" />}
         </Field>
         <Button type="submit" size="lg" loading={checking} className="w-full">
@@ -137,7 +135,6 @@ export function ReviewForm({ initialCode }: { initialCode: string }) {
       </p>
 
       <RatingInput label="Note générale" value={rating} onChange={setRating} required />
-      {checked.serviceType === 'REPAIR' && <RatingInput label="Qualité de la réparation" value={ratingRepair} onChange={setRatingRepair} />}
       <RatingInput label="Accueil" value={ratingWelcome} onChange={setRatingWelcome} />
       <RatingInput label="Rapport qualité-prix" value={ratingValue} onChange={setRatingValue} />
 

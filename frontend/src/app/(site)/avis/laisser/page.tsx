@@ -6,7 +6,7 @@ import type { PublicSettings } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Donner mon avis',
-  description: 'Notez YAMEOGO : réparation, accueil, rapport qualité-prix.',
+  description: 'Notez votre achat chez YAMEOGO : produit, accueil, rapport qualité-prix.',
   alternates: { canonical: '/avis/laisser' },
 };
 
@@ -15,7 +15,7 @@ export default async function LeaveReviewPage({ searchParams }: { searchParams: 
   const settings = await serverGet<PublicSettings>('/settings/public', 60);
   return (
     <>
-      <PageHero title="Votre avis" text="Avec le code reçu après votre réparation ou votre achat. Une minute, sans compte." image={settings?.shopImageUrl} back="/avis" />
+      <PageHero title="Votre avis" text="Avec le code reçu lors de votre achat. Une minute, sans compte." image={settings?.shopImageUrl} back="/avis" />
       <div className="container-page -mt-6 relative">
         <div className="mx-auto max-w-xl rounded-3xl border border-line bg-surface p-6 shadow-card sm:p-8">
           <ReviewForm initialCode={code ?? ''} />

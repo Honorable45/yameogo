@@ -44,7 +44,7 @@ export default async function LegalPage() {
       )}
       <section>
         <h2>Prix</h2>
-        <p>Les prix sont indiqués en francs CFA (XOF). Les commandes se concluent sur WhatsApp. Les estimations de réparation sont indicatives et confirmées après diagnostic.</p>
+        <p>Les prix sont indiqués en francs CFA (XOF). Les commandes se concluent sur WhatsApp : la disponibilité, le prix et les modalités de livraison et de paiement sont confirmés par la boutique avant toute vente.</p>
       </section>
       <section>
         <h2>Photographies</h2>

@@ -2,30 +2,46 @@ import { ArrowRight, ImageOff } from 'lucide-react';
 import type { ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Availability, PhoneCondition, PublicPhone, PublicProduct } from '@/lib/types';
+import type { Availability, CatalogCard, Condition } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { formatPrice } from '@/lib/format';
-import { PHONE_CONDITIONS } from '@/lib/phone-conditions';
-import { SITE_URL } from '@/lib/site';
-import { buyMessage, waLink } from '@/lib/whatsapp';
-import { BuyButton } from './buy-button';
 
 export function availabilityText(a: Availability, qty: number) {
   if (a === 'OUT_OF_STOCK') return { text: 'Épuisé', tone: 'text-faint', dot: 'bg-line-2' };
-  if (a === 'LOW_STOCK') return { text: qty === 1 ? 'Dernier exemplaire' : `Plus que ${qty}`, tone: 'text-warn', dot: 'bg-warn' };
+  if (a === 'LOW_STOCK') return { text: qty === 1 ? 'Dernière unité' : `Plus que ${qty}`, tone: 'text-warn', dot: 'bg-warn' };
   return { text: 'En stock', tone: 'text-ok', dot: 'bg-ok' };
 }
 
-const CONDITION_STYLE: Record<PhoneCondition, string> = {
-  NEW: 'bg-ok text-white',
-  IMPORTED: 'bg-ochre text-white',
-  USED: 'bg-navy text-white',
-};
+export const CONDITION_LABELS: Record<Condition, string> = { NEW: 'Neuf', USED: 'Occasion' };
 
-/** Neuf / Venu / Occasion : toujours accompagné du libellé, jamais la couleur seule. */
-export function ConditionBadge({ condition: value, className }: { condition: PhoneCondition | undefined; className?: string }) {
-  const condition = value && PHONE_CONDITIONS[value] ? value : 'USED';
-  return <span className={cn('inline-flex items-center rounded-xs px-2 py-1 text-[11.5px] font-semibold uppercase leading-none tracking-[0.06em]', CONDITION_STYLE[condition], className)}>{PHONE_CONDITIONS[condition].label}</span>;
+/** Neuf / Occasion : toujours accompagné du libellé, jamais la couleur seule. */
+export function ConditionBadge({ condition, className }: { condition: Condition; className?: string }) {
+  return (
+    <span className={cn('inline-flex items-center rounded-xs px-2 py-1 text-[11px] font-semibold uppercase leading-none tracking-[0.06em]', condition === 'NEW' ? 'bg-surface text-ink ring-1 ring-line-2' : 'bg-navy text-white', className)}>
+      {CONDITION_LABELS[condition]}
+    </span>
+  );
+}
+
+/** « −12 % » : réduction arrondie, seulement si le prix barré est renseigné. */
+export function discount(price: number, compareAt: number | null) {
+  return compareAt && compareAt > price ? Math.round(((compareAt - price) / compareAt) * 100) : null;
+}
+
+export function PriceTag({ price, compareAt, from, size = 'md', className }: { price: number; compareAt?: number | null; from?: boolean; size?: 'md' | 'lg'; className?: string }) {
+  const off = discount(price, compareAt ?? null);
+  return (
+    <p className={cn('flex flex-wrap items-baseline gap-x-2 gap-y-0.5', className)}>
+      {from && <span className="text-[12.5px] text-muted">À partir de</span>}
+      <span className={cn('num font-semibold', off ? 'text-ochre-ink' : 'text-accent', size === 'lg' ? 'text-[30px] leading-none sm:text-[34px]' : 'text-[16px]')}>{formatPrice(price)}</span>
+      {off && compareAt && (
+        <>
+          <span className={cn('num text-muted line-through', size === 'lg' ? 'text-[16px]' : 'text-[12.5px]')}>{formatPrice(compareAt)}</span>
+          {size === 'lg' && <span className="rounded-full bg-ochre-soft px-2 py-0.5 text-[12.5px] font-semibold text-ochre-ink">−{off} %</span>}
+        </>
+      )}
+    </p>
+  );
 }
 
 export function ProductImage({ src, alt, sizes, priority, className }: { src: string | null | undefined; alt: string; sizes: string; priority?: boolean; className?: string }) {
@@ -43,84 +59,65 @@ export function ProductImage({ src, alt, sizes, priority, className }: { src: st
   );
 }
 
-const card = 'group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-card';
+/** Pastilles de couleur (avec leur nom en infobulle et pour les lecteurs d'écran). */
+export function ColorDots({ colors, max = 5, className }: { colors: { name: string; hex: string | null }[]; max?: number; className?: string }) {
+  if (!colors.length) return null;
+  return (
+    <ul className={cn('flex items-center gap-1', className)} aria-label={`Couleurs : ${colors.map((c) => c.name).join(', ')}`}>
+      {colors.slice(0, max).map((c) => (
+        <li key={c.name} title={c.name} className="size-3.5 rounded-full ring-1 ring-black/15" style={{ background: c.hex ?? 'var(--color-paper-3)' }} />
+      ))}
+      {colors.length > max && <li className="text-[11.5px] text-muted">+{colors.length - max}</li>}
+    </ul>
+  );
+}
 
-export function ProductCard({ product, priority, whatsapp }: { product: PublicProduct; priority?: boolean; whatsapp?: string | null }) {
-  const image = product.images[0];
-  const out = product.availability === 'OUT_OF_STOCK';
-  const brands = [...new Set(product.compatibility.map((c) => c.model ?? c.brand))].slice(0, 2);
-  const href = `/accessoires/${product.slug}`;
+const card = 'group relative flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-card';
+
+/** Résumé des capacités proposées : « 8 Go RAM · 128 / 256 Go ». */
+function capacities(p: CatalogCard) {
+  const parts = [p.ramGbs.length ? `${p.ramGbs.join(' / ')} Go RAM` : null, p.storageGbs.length ? `${p.storageGbs.join(' / ')} Go` : null];
+  return parts.filter(Boolean).join(' · ');
+}
+
+export function ProductCard({ product: p, priority }: { product: CatalogCard; priority?: boolean }) {
+  const href = `/${p.kind === 'PHONE' ? 'telephones' : 'accessoires'}/${p.slug}`;
+  const off = p.priceFrom !== null ? discount(p.priceFrom, p.compareAtPrice) : null;
+  const phone = p.kind === 'PHONE';
   return (
     <article className={card}>
-      <div className="relative">
-        <Link href={href} className="block" tabIndex={-1} aria-hidden="true">
-          <ProductImage src={image?.url} alt={image?.alt ?? product.name} sizes="(min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw" priority={priority} />
-        </Link>
-        {product.availability === 'LOW_STOCK' && <span className="absolute left-2 top-2 rounded-full bg-ochre px-2.5 py-1 text-[11px] font-semibold leading-none text-white">{availabilityText(product.availability, product.availableQuantity).text}</span>}
-        <BuyButton
-          overlay
-          size="sm"
-          disabled={out}
-          className="absolute bottom-2.5 right-2.5 z-20"
-          href={waLink(whatsapp, buyMessage({ name: product.name, price: product.price, ref: product.sku, url: `${SITE_URL}${href}` }))}
-        />
-      </div>
+      <Link href={href} className="relative block" tabIndex={-1} aria-hidden="true">
+        <ProductImage src={p.image?.url} alt={p.image?.alt ?? p.name} sizes="(min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw" priority={priority} className={phone ? 'aspect-[4/5]' : undefined} />
+        <span className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+          {off && <span className="rounded-full bg-ochre px-2.5 py-1 text-[11px] font-semibold leading-none text-white">−{off} %</span>}
+          {!p.inStock && <span className="rounded-full bg-ink/80 px-2.5 py-1 text-[11px] font-medium leading-none text-white">Épuisé</span>}
+        </span>
+      </Link>
       <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <h3 className="line-clamp-2 text-[14.5px] font-medium leading-snug text-ink">
+        {p.brand && <p className="eyebrow !text-[10.5px]">{p.brand.name}</p>}
+        <h3 className={cn('line-clamp-2 text-[14.5px] font-medium leading-snug text-ink sm:text-[15px]', p.brand && 'mt-1')}>
           <Link href={href} className="after:absolute after:inset-0 hover:text-accent">
-            {product.name}
+            {p.name}
           </Link>
         </h3>
-        {brands.length > 0 && <p className="mt-0.5 truncate text-[12.5px] text-muted">{brands.join(', ')}</p>}
-        <p className="num mt-auto pt-2.5 text-[16px] font-semibold text-accent">{formatPrice(product.price)}</p>
+        {phone && capacities(p) && <p className="mt-1 text-[12.5px] text-muted">{capacities(p)}</p>}
+        {phone && p.conditions.length > 0 && <p className="mt-0.5 text-[12.5px] text-muted">{p.conditions.map((c) => CONDITION_LABELS[c]).join(' ou ')}</p>}
+        <ColorDots colors={p.colors} className="mt-2.5" />
+        {p.priceFrom !== null && <PriceTag price={p.priceFrom} compareAt={p.compareAtPrice} from={p.priceTo !== null && p.priceTo > p.priceFrom} className="mt-auto pt-3" />}
       </div>
     </article>
   );
 }
 
-export function PhoneSpecs({ phone, className }: { phone: PublicPhone; className?: string }) {
-  const specs = [
-    phone.storageGb ? `${phone.storageGb} Go` : null,
-    phone.condition !== 'NEW' ? phone.gradeLabel : null,
-    phone.batteryHealth !== null && phone.condition !== 'NEW' ? `Batterie ${phone.batteryHealth} %` : null,
-  ].filter(Boolean);
-  return <p className={cn('text-[13px] text-muted', className)}>{specs.join(' · ')}</p>;
-}
-
-export function PhoneCard({ phone, priority, whatsapp }: { phone: PublicPhone; priority?: boolean; whatsapp?: string | null }) {
-  const image = phone.images[0];
-  const href = `/telephones/${phone.slug}`;
-  const name = `${phone.brand.name} ${phone.title} (${PHONE_CONDITIONS[phone.condition]?.label.toLowerCase() ?? ''})`;
+export function ProductGrid({ products, className }: { products: CatalogCard[]; className?: string }) {
   return (
-    <article className={card}>
-      <div className="relative">
-        <Link href={href} className="block" tabIndex={-1} aria-hidden="true">
-          <ProductImage src={image?.url} alt={image?.alt ?? phone.title} sizes="(min-width: 1024px) 23vw, (min-width: 640px) 31vw, 70vw" priority={priority} className="aspect-[4/5]" />
-        </Link>
-        <span className="absolute left-2.5 top-2.5 flex gap-1.5">
-          <ConditionBadge condition={phone.condition} />
-          {phone.status === 'RESERVED' && <span className="rounded-xs bg-ink px-2 py-1 text-[11.5px] font-medium leading-none text-white">Réservé</span>}
-        </span>
-        <BuyButton
-          overlay
-          size="sm"
-          disabled={phone.status !== 'AVAILABLE'}
-          className="absolute bottom-2.5 right-2.5 z-20"
-          href={waLink(whatsapp, buyMessage({ name, price: phone.price, ref: phone.reference, url: `${SITE_URL}${href}` }))}
-        />
-      </div>
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <p className="eyebrow !text-[10.5px]">{phone.brand.name}</p>
-        <h3 className="mt-1 text-[15px] font-medium leading-snug">
-          <Link href={href} className="after:absolute after:inset-0 hover:text-accent">
-            {phone.modelName}
-            {phone.storageGb ? ` · ${phone.storageGb} Go` : ''}
-          </Link>
-        </h3>
-        <PhoneSpecs phone={{ ...phone, storageGb: null }} className="mt-0.5" />
-        <p className="num mt-auto pt-2.5 text-[16px] font-semibold text-accent">{formatPrice(phone.price)}</p>
-      </div>
-    </article>
+    <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5', className)}>
+      {products.map((p, i) => (
+        <li key={p.id} className="flex min-w-0">
+          <ProductCard product={p} priority={i < 4} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
