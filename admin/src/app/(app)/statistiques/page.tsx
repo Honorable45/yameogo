@@ -19,9 +19,8 @@ interface Report {
   previous: Totals;
   series: Point[];
   topProducts: { productId: string; label: string; sku: string; quantity: number; revenue: number; grossMargin: number }[];
-  topRepairs: { name: string; count: number; revenue: number; grossMargin: number }[];
   expensesByCategory: { category: string; label: string; amount: number }[];
-  snapshot: { stockValue: number; usedPhonesValue: number; productsToRestock: number; unpaidRepairs: number; pendingRepairs: number; readyRepairs: number };
+  snapshot: { stockValue: number; stockValuePhones: number; stockValueAccessories: number; productsToRestock: number; unpaidOrders: number };
 }
 
 const PRESETS = [
@@ -60,9 +59,9 @@ export default function StatsPage() {
   const t = r?.totals;
   const p = r?.previous;
   const KPIS: [string, string, boolean?, string?][] = [
-    ['revenue', 'Chiffre d’affaires', false, 'Ventes et réparations terminées'],
+    ['revenue', 'Chiffre d’affaires', false, 'Ventes terminées (smartphones, accessoires, livraison)'],
     ['cashIn', 'Encaissé', false, 'Paiements confirmés − remboursements'],
-    ['directCosts', 'Coûts directs', true, 'Coût des articles vendus et des réparations'],
+    ['directCosts', 'Coûts directs', true, 'Coût d’achat des articles vendus (coût moyen)'],
     ['grossMargin', 'Marge brute', false, 'CA − coûts directs'],
     ['expenses', 'Dépenses générales', true, 'Charges de fonctionnement'],
     ['estimatedResult', 'Résultat estimé', false, 'Marge brute − dépenses générales'],
@@ -70,9 +69,8 @@ export default function StatsPage() {
 
   const activities = t
     ? [
+        { key: 'phones', label: 'Smartphones', revenue: t.revenuePhones, cost: t.costPhones },
         { key: 'accessories', label: 'Accessoires', revenue: t.revenueAccessories, cost: t.costAccessories },
-        { key: 'phones', label: 'Téléphones d’occasion', revenue: t.revenuePhones, cost: t.costPhones },
-        { key: 'repairs', label: 'Réparations', revenue: t.revenueRepairs, cost: t.costRepairs },
       ]
     : [];
 
@@ -82,10 +80,10 @@ export default function StatsPage() {
         title="Statistiques"
         actions={
           <div className="flex flex-wrap gap-2">
-            {(['summary', 'sales', 'repairs', 'expenses'] as const).map((type) => (
+            {(['summary', 'sales', 'expenses'] as const).map((type) => (
               <a key={type} href={`/api/stats/export${qs({ type, period: preset, from: preset === 'custom' ? from : undefined, to: preset === 'custom' ? to : undefined })}`} className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-line-2 bg-surface px-3 text-[13px] font-medium hover:border-ink-2">
                 <Download className="size-3.5" />
-                {{ summary: 'Synthèse', sales: 'Ventes', repairs: 'Réparations', expenses: 'Dépenses' }[type]} CSV
+                {{ summary: 'Synthèse', sales: 'Ventes', expenses: 'Dépenses' }[type]} CSV
               </a>
             ))}
           </div>
@@ -195,13 +193,13 @@ export default function StatsPage() {
               </table>
             </div>
             <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted">
-              {t.completedOrders} vente(s) terminée(s) · {t.repairsCompleted} réparation(s) terminée(s) · {t.repairsReceived} téléphone(s) reçu(s) en atelier
+              {t.completedOrders} vente(s) terminée(s)
               {t.returns > 0 && ` · retours déduits : ${formatPrice(t.returns)}`}
               {t.refunds > 0 && ` · remboursements : ${formatPrice(t.refunds)}`}
             </p>
           </Panel>
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-2">
             <Panel title="Articles les plus vendus" bodyClassName="">
               {r.topProducts.length === 0 ? <p className="px-5 py-5 text-[13.5px] text-muted">Aucune vente sur la période.</p> : (
                 <ol className="divide-y divide-line">
@@ -211,22 +209,6 @@ export default function StatsPage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{x.label}</span>
                         <span className="text-[12px] text-muted">{x.quantity} vendu(s) · marge {formatPrice(x.grossMargin)}</span>
-                      </span>
-                      <span className="num">{formatPrice(x.revenue)}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </Panel>
-            <Panel title="Réparations les plus fréquentes" bodyClassName="">
-              {r.topRepairs.length === 0 ? <p className="px-5 py-5 text-[13.5px] text-muted">Aucune réparation terminée.</p> : (
-                <ol className="divide-y divide-line">
-                  {r.topRepairs.map((x, i) => (
-                    <li key={x.name} className="flex items-start gap-3 px-5 py-2.5 text-[13.5px]">
-                      <span className="num w-4 text-faint">{i + 1}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate">{x.name}</span>
-                        <span className="text-[12px] text-muted">{x.count} réparation(s) · marge {formatPrice(x.grossMargin)}</span>
                       </span>
                       <span className="num">{formatPrice(x.revenue)}</span>
                     </li>
@@ -256,9 +238,9 @@ export default function StatsPage() {
           <section className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line lg:grid-cols-4" aria-label="Situation actuelle">
             {[
               ['Valeur du stock', formatPrice(r.snapshot.stockValue)],
-              ['Téléphones d’occasion en stock', formatPrice(r.snapshot.usedPhonesValue)],
-              ['Réparations non soldées', formatPrice(r.snapshot.unpaidRepairs)],
-              ['Réparations en cours', String(r.snapshot.pendingRepairs)],
+              ['Dont smartphones', formatPrice(r.snapshot.stockValuePhones)],
+              ['Ventes non soldées', formatPrice(r.snapshot.unpaidOrders)],
+              ['Articles à réapprovisionner', String(r.snapshot.productsToRestock)],
             ].map(([label, value]) => (
               <div key={label} className="bg-surface px-5 py-4">
                 <p className="text-[12.5px] text-muted">{label}</p>

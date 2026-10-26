@@ -1,8 +1,7 @@
 'use client';
 
 import { api } from '@/lib/api';
-import type { RepairDetail } from '@/lib/admin-types';
-import { formatDate, formatDateTime, formatPhone, formatPrice } from '@/lib/format';
+import { formatDateTime, formatPhone, formatPrice } from '@/lib/format';
 import { PAYMENT_METHODS } from '@/lib/labels';
 import { esc, printDocument, type PrintFormat } from '@/lib/print';
 import { qrPngDataUrl } from './qr-code';
@@ -47,7 +46,7 @@ function header(s: Shop, title: string, format: PrintFormat) {
 }
 
 /** Bloc « Votre avis » : code et QR code ; vide si un avis a déjà été donné ou si le code est indisponible. */
-async function reviewBlock(kind: 'reparation' | 'vente', id: string, siteUrl: string | undefined, format: PrintFormat) {
+async function reviewBlock(kind: 'vente', id: string, siteUrl: string | undefined, format: PrintFormat) {
   let code: ReviewCode;
   try {
     code = await api.get<ReviewCode>(`/review-codes/${kind}/${id}`);
@@ -67,28 +66,6 @@ async function reviewBlock(kind: 'reparation' | 'vente', id: string, siteUrl: st
         <p class="muted">${link ? `Scannez le QR code ou saisissez ce code sur ${esc(siteUrl!.replace(/^https?:\/\//, ''))}/avis/laisser` : 'À saisir sur la page « Avis » du site'}${code.usable ? '' : `, après ${esc(code.waitingFor)}`}.</p>
       </div>
     </div>`;
-}
-
-/** Bon de dépôt d'une réparation : une page A4, avec le code d'avis. */
-export async function printDepositSlip(repair: RepairDetail) {
-  const s = await shop();
-  const rows: [string, string][] = [
-    ['Client', `${repair.customer.name} · ${formatPhone(repair.customer.phone)}`],
-    ['Appareil', `${repair.brandName} ${repair.modelName}${repair.imeiLast4 ? ` · IMEI …${repair.imeiLast4}` : ''}`],
-    ['Panne signalée', repair.reportedIssue],
-    ['Montant convenu', repair.billedAmount ? formatPrice(repair.billedAmount) : 'Sur devis après diagnostic'],
-    ...(repair.amountPaid ? ([['Déjà réglé', formatPrice(repair.amountPaid)], ['Reste à payer', formatPrice(repair.balanceDue)]] as [string, string][]) : []),
-    ['Date prévue', repair.dueAt ? formatDate(repair.dueAt) : '—'],
-  ];
-  const body = `${header(s, 'Bon de dépôt — réparation', 'a4')}
-    <div class="row" style="margin-top:10px"><span>N° <span class="code">${esc(repair.number)}</span></span><span>${esc(formatDateTime(repair.receivedAt))}</span></div>
-    <div class="rule"></div>
-    <table>${rows.map(([k, v]) => `<tr><th style="width:38%" class="muted">${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>
-    ${await reviewBlock('reparation', repair.id, s.siteUrl, 'a4')}
-    <div class="rule"></div>
-    <p class="muted" style="font-size:11px">Aucune intervention n’est réalisée sans votre accord sur le devis. Conservez ce bon : il est demandé lors du retrait de l’appareil.</p>
-    <div class="row" style="margin-top:28px"><span>Signature du client</span><span>Pour ${esc(s.shopName)}</span></div>`;
-  printDocument(`Bon de dépôt ${repair.number}`, body, 'a4');
 }
 
 /** Ticket de caisse (rouleau 80 mm), avec le code d'avis. */

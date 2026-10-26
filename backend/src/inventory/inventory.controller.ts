@@ -91,16 +91,16 @@ export class InventoryController {
     const [value] = await this.prisma.$queryRaw<{ value: bigint | null; units: bigint | null }[]>`
       SELECT SUM("stockQuantity" * "averageCost") AS value, SUM("stockQuantity") AS units
       FROM "Product" WHERE "status" = 'ACTIVE'`;
-    const [phones] = await this.prisma.$queryRaw<{ value: bigint | null; count: bigint }[]>`
-      SELECT SUM("purchasePrice") AS value, COUNT(*) AS count
-      FROM "UsedPhone" WHERE "status" IN ('PENDING_CHECK', 'AVAILABLE', 'RESERVED', 'RETURNED')`;
+    const [phones] = await this.prisma.$queryRaw<{ value: bigint | null; count: bigint | null }[]>`
+      SELECT SUM("stockQuantity" * "averageCost") AS value, SUM("stockQuantity") AS count
+      FROM "Product" WHERE "status" = 'ACTIVE' AND "kind" = 'PHONE'`;
     const alerts = await this.alerts();
     const withCosts = can(me.role, 'costs.read');
     return {
       stockValue: withCosts ? Number(value.value ?? 0) : null,
       units: Number(value.units ?? 0),
-      usedPhonesValue: withCosts ? Number(phones.value ?? 0) : null,
-      usedPhonesInStock: Number(phones.count),
+      phonesValue: withCosts ? Number(phones.value ?? 0) : null,
+      phonesInStock: Number(phones.count ?? 0),
       alerts,
     };
   }

@@ -85,7 +85,7 @@ export class ReviewsService {
     return {
       code,
       expiresAt,
-      // Le client peut l'utiliser dès maintenant, ou seulement plus tard (réparation en cours…).
+      // Le client peut l'utiliser dès maintenant, ou seulement après la remise de sa commande.
       usable: state.done,
       waitingFor: state.done ? null : state.waitingFor,
       review: state.review,

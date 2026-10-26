@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Boxes, PackageCheck, Timer, Wrench, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Boxes, CircleDollarSign, ReceiptText, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Metric, PageHeader, Panel } from '@/components/admin/ui';
 import { useSession } from '@/components/admin/session';
@@ -8,33 +8,23 @@ import { ErrorState } from '@/components/ui/empty-state';
 import { LoadingBlock } from '@/components/ui/spinner';
 import { Status } from '@/components/ui/status';
 import { cn } from '@/lib/cn';
-import { formatDate, formatDateLong, formatPrice } from '@/lib/format';
-import { REPAIR_STATUS } from '@/lib/labels';
+import { formatDateLong, formatDateTime, formatPrice } from '@/lib/format';
+import { ORDER_STATUS, SETTLEMENT } from '@/lib/labels';
 import { useResource } from '@/lib/use-resource';
 
 interface Overview {
   queue: Record<string, number | null>;
-  upcoming: {
-    id: string;
-    number: string;
-    status: string;
-    brandName: string;
-    modelName: string;
-    dueAt: string | null;
-    receivedAt: string;
-    customer: { name: string };
-    technician: { name: string } | null;
-  }[];
+  recentSales: { id: string; number: string; status: string; total: number; paymentStatus: string; customerName: string; createdAt: string; _count: { items: number } }[];
   today: null | {
     totals: Record<string, number>;
-    snapshot: { stockValue: number; usedPhonesValue: number; productsToRestock: number; unpaidRepairs: number; pendingRepairs: number; readyRepairs: number };
+    snapshot: { stockValue: number; stockValuePhones: number; stockValueAccessories: number; productsToRestock: number; unpaidOrders: number };
   };
 }
 
 const QUEUE: { key: string; label: string; href: string; icon: LucideIcon }[] = [
-  { key: 'quotesPending', label: 'Devis en attente de réponse du client', href: '/reparations?onglet=QUOTE_PENDING', icon: Timer },
-  { key: 'repairsLate', label: 'Réparations en retard', href: '/reparations?onglet=late', icon: Wrench },
-  { key: 'repairsReady', label: 'Téléphones prêts à remettre', href: '/reparations?onglet=ready', icon: PackageCheck },
+  { key: 'ordersPending', label: 'Commandes à confirmer', href: '/commandes?onglet=PENDING', icon: ReceiptText },
+  { key: 'ordersInProgress', label: 'Commandes en cours', href: '/commandes?onglet=open', icon: ReceiptText },
+  { key: 'unpaidSales', label: 'Ventes non entièrement réglées', href: '/commandes', icon: CircleDollarSign },
   { key: 'lowStock', label: 'Articles à réapprovisionner', href: '/stocks', icon: Boxes },
 ];
 
@@ -46,7 +36,8 @@ export default function OverviewPage() {
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return <LoadingBlock />;
   const t = data.today?.totals;
-    // Seules les tâches réellement en attente sont affichées.
+  const snapshot = data.today?.snapshot;
+  // Seules les tâches réellement en attente sont affichées.
   const queue = QUEUE.filter((q) => (data.queue[q.key] ?? 0) > 0);
 
   return (
@@ -62,11 +53,21 @@ export default function OverviewPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-y-6 px-5 py-5 lg:grid-cols-4 lg:divide-x lg:divide-line lg:px-0">
-            <Metric className="lg:px-5" label="Chiffre d’affaires" value={formatPrice(t.revenue)} note={`${t.completedOrders} vente${t.completedOrders > 1 ? 's' : ''} · ${t.repairsCompleted} réparation${t.repairsCompleted > 1 ? 's' : ''}`} />
+            <Metric className="lg:px-5" label="Chiffre d’affaires" value={formatPrice(t.revenue)} note={`${t.completedOrders} vente${t.completedOrders > 1 ? 's' : ''}`} />
             <Metric className="lg:px-5" label="Encaissé" value={formatPrice(t.cashIn)} note={t.refunds ? `dont remboursements : ${formatPrice(t.refunds)}` : 'Paiements confirmés'} />
             <Metric className="lg:px-5" label="Marge brute" value={formatPrice(t.grossMargin)} note={`Coûts directs : ${formatPrice(t.directCosts)}`} tone={t.grossMargin < 0 ? 'bad' : undefined} />
             <Metric className="lg:px-5" label="Résultat estimé" value={formatPrice(t.estimatedResult)} note={`Dépenses : ${formatPrice(t.expenses)}`} tone={t.estimatedResult < 0 ? 'bad' : undefined} />
           </div>
+          {snapshot && (
+            <p className="border-t border-line px-5 py-3 text-[13px] text-muted">
+              Stock valorisé : <span className="num text-ink">{formatPrice(snapshot.stockValue)}</span> (smartphones {formatPrice(snapshot.stockValuePhones)}, accessoires {formatPrice(snapshot.stockValueAccessories)})
+              {snapshot.unpaidOrders > 0 && (
+                <>
+                  {' '}· Reste à encaisser : <span className="num text-ink">{formatPrice(snapshot.unpaidOrders)}</span>
+                </>
+              )}
+            </p>
+          )}
         </section>
       )}
 
@@ -90,47 +91,44 @@ export default function OverviewPage() {
         </Panel>
 
         <Panel
-          title="Prochaines réparations"
+          title="Dernières ventes"
           className="xl:col-span-7"
           bodyClassName=""
           actions={
-            <Link href="/reparations" className="text-[13px] text-accent hover:underline">
-              Toutes les réparations
+            <Link href="/commandes" className="text-[13px] text-accent hover:underline">
+              Toutes les ventes
             </Link>
           }
         >
-          {data.upcoming.length === 0 ? (
-            <p className="px-5 py-10 text-center text-[14px] text-muted">Aucune réparation en cours.</p>
+          {data.recentSales.length === 0 ? (
+            <p className="px-5 py-10 text-center text-[14px] text-muted">Aucune vente pour le moment.</p>
           ) : (
             <ul className="divide-y divide-line">
-              {data.upcoming.map((r) => {
-                const late = r.dueAt && new Date(r.dueAt) < new Date();
-                return (
-                  <li key={r.id}>
-                    <Link href={`/reparations/${r.id}`} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3 hover:bg-paper/70 sm:grid-cols-[7.5rem_1fr_auto] sm:px-5">
-                      <span className="font-mono text-[13px] text-ink-2">{r.number}</span>
-                      <span className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">
-                        <span className="block truncate text-[14px] font-medium">
-                          {r.brandName} {r.modelName}
-                        </span>
-                        <span className="block truncate text-[12.5px] text-muted">
-                          {r.customer.name}
-                          {r.technician ? ` · ${r.technician.name}` : ''}
-                        </span>
+              {data.recentSales.map((o) => (
+                <li key={o.id}>
+                  <Link href={`/commandes/${o.id}`} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3 hover:bg-paper/70 sm:grid-cols-[8rem_1fr_auto] sm:px-5">
+                    <span className="font-mono text-[13px] text-ink-2">{o.number}</span>
+                    <span className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">
+                      <span className="block truncate text-[14px] font-medium">{o.customerName}</span>
+                      <span className="block text-[12.5px] text-muted">
+                        {o._count.items} article{o._count.items > 1 ? 's' : ''} · {formatDateTime(o.createdAt)}
                       </span>
-                      <span className="row-span-2 flex flex-col items-end gap-1 text-right sm:row-span-1">
-                        <Status tone={REPAIR_STATUS[r.status].tone}>{REPAIR_STATUS[r.status].label}</Status>
-                        <span className={cn('num text-[12.5px]', late ? 'font-medium text-bad' : 'text-muted')}>{r.dueAt ? `Prévu le ${formatDate(r.dueAt)}` : `Reçu le ${formatDate(r.receivedAt)}`}</span>
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
+                    </span>
+                    <span className="row-span-2 flex flex-col items-end gap-1 text-right sm:row-span-1">
+                      <span className="num text-[14px] font-medium">{formatPrice(o.total)}</span>
+                      {o.paymentStatus !== 'PAID' ? (
+                        <Status tone={SETTLEMENT[o.paymentStatus].tone}>{SETTLEMENT[o.paymentStatus].label}</Status>
+                      ) : (
+                        <Status tone={ORDER_STATUS[o.status].tone}>{ORDER_STATUS[o.status].label}</Status>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
             </ul>
           )}
         </Panel>
       </div>
-
     </>
   );
 }

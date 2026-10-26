@@ -24,8 +24,7 @@ import { printSaleTicket } from '@/components/admin/receipts';
 
 interface OrderItem {
   id: string;
-  productId: string | null;
-  usedPhoneId: string | null;
+  productId: string;
   label: string;
   sku: string;
   quantity: number;
@@ -96,7 +95,7 @@ function ReturnDialog({ order, item, onClose, onDone }: { order: OrderDetail; it
         await api.post<OrderDetail>(`/orders/${order.id}/returns`, {
           itemId: item.id,
           quantity: Number(qty),
-          restock: item.usedPhoneId ? true : restock,
+          restock,
           reason: reason.trim(),
           refund: Number(refund) > 0 ? { method, amount: Number(refund) } : undefined,
         }),
@@ -127,16 +126,10 @@ function ReturnDialog({ order, item, onClose, onDone }: { order: OrderDetail; it
       }
     >
       <div className="space-y-4">
-        {!item.usedPhoneId && (
-          <Field label="Quantité retournée" hint={`Maximum : ${max}`}>
-            {(p) => <Input {...p} type="number" min={1} max={max} value={qty} onChange={(e) => setQty(e.target.value)} className="num w-28" />}
-          </Field>
-        )}
-        {item.usedPhoneId ? (
-          <p className="text-[13.5px] text-muted">Le téléphone repasse au statut « Retourné » : vérifiez-le avant de le remettre en vente.</p>
-        ) : (
-          <Checkbox checked={restock} onChange={(e) => setRestock(e.target.checked)} label="Remettre en stock" />
-        )}
+        <Field label="Quantité retournée" hint={`Maximum : ${max}`}>
+          {(p) => <Input {...p} type="number" min={1} max={max} value={qty} onChange={(e) => setQty(e.target.value)} className="num w-28" />}
+        </Field>
+        <Checkbox checked={restock} onChange={(e) => setRestock(e.target.checked)} label="Remettre en stock" description="Décochez si l’article retourné est défectueux et ne peut pas être revendu." />
         <Field label="Motif">{(p) => <Textarea {...p} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />}</Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Remboursement" optional hint={`Valeur retournée : ${formatPrice(value)} · encaissé : ${formatPrice(order.amountPaid)}`}>
@@ -226,7 +219,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
                 <li key={i.id} className="flex items-start justify-between gap-4 px-4 py-3 sm:px-5">
                   <div className="min-w-0">
                     <p className="text-[14px] font-medium">
-                      {i.productId ? <Link href={`/produits/${i.productId}`} className="hover:underline">{i.label}</Link> : <Link href={`/occasions/${i.usedPhoneId}`} className="hover:underline">{i.label}</Link>}
+                      <Link href={`/produits/${i.productId}`} className="hover:underline">{i.label}</Link>
                     </p>
                     <p className="text-[12.5px] text-muted">
                       <span className="font-mono">{i.sku}</span> · {i.quantity} × {formatPrice(i.unitPrice)}

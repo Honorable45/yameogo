@@ -15,7 +15,7 @@ interface CustomerRow {
   email: string | null;
   createdAt: string;
   updatedAt: string;
-  _count: { orders: number; repairJobs: number };
+  _count: { orders: number };
 }
 
 const params = () => ({});
@@ -41,7 +41,6 @@ function CustomersList() {
               columns={[
                 { key: 'name', header: 'Client', cell: (c) => <span className="font-medium">{c.name}</span> },
                 { key: 'phone', header: 'Téléphone', cell: (c) => <span className="num">{formatPhone(c.phone)}</span> },
-                { key: 'repairs', header: 'Réparations', align: 'right', cell: (c) => c._count.repairJobs },
                 { key: 'orders', header: 'Commandes', align: 'right', cell: (c) => c._count.orders },
                 { key: 'since', header: 'Client depuis', cell: (c) => <span className="num">{formatDate(c.createdAt)}</span> },
               ]}

@@ -52,7 +52,7 @@ class ExpenseQuery extends PageQuery {
 /**
  * Dépenses générales (charges de fonctionnement).
  * Les achats de marchandises et de pièces ne sont pas des dépenses : ils passent par les
- * approvisionnements et entrent dans les coûts au moment de la vente ou de la réparation.
+ * approvisionnements et entrent dans les coûts au moment de la vente.
  * Une dépense n'est jamais supprimée : elle est annulée ou corrigée (nouvelle écriture liée).
  */
 @Controller('expenses')

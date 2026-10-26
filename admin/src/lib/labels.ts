@@ -2,18 +2,6 @@ import type { Tone } from '@/components/ui/status';
 
 type Labels = Record<string, { label: string; tone: Tone }>;
 
-export const REPAIR_STATUS: Labels = {
-  RECEIVED: { label: 'Téléphone reçu', tone: 'neutral' },
-  DIAGNOSING: { label: 'Diagnostic en cours', tone: 'info' },
-  QUOTE_PENDING: { label: 'Devis à confirmer', tone: 'warn' },
-  QUOTE_ACCEPTED: { label: 'Devis accepté', tone: 'info' },
-  WAITING_PARTS: { label: 'En attente de pièces', tone: 'warn' },
-  IN_PROGRESS: { label: 'Réparation en cours', tone: 'info' },
-  COMPLETED: { label: 'Réparation terminée', tone: 'ok' },
-  PICKED_UP: { label: 'Téléphone récupéré', tone: 'done' },
-  CANCELLED: { label: 'Annulée', tone: 'bad' },
-};
-
 export const ORDER_STATUS: Labels = {
   PENDING: { label: 'À confirmer', tone: 'warn' },
   CONFIRMED: { label: 'Confirmée', tone: 'info' },
@@ -81,8 +69,6 @@ export const MOVEMENT_TYPES: Record<string, string> = {
   PURCHASE_CANCEL: 'Annulation d’approvisionnement',
   SALE: 'Vente',
   SALE_RETURN: 'Retour client',
-  REPAIR_USE: 'Utilisée en réparation',
-  REPAIR_RETURN: 'Retirée d’une réparation',
   ADJUSTMENT: 'Correction',
   COUNT: 'Inventaire',
 };
@@ -98,7 +84,7 @@ export const EXPENSE_CATEGORIES: Record<string, string> = {
   OTHER: 'Autres dépenses',
 };
 
-export const ROLES: Record<string, string> = { MANAGER: 'Responsable', TECHNICIAN: 'Réparateur', SELLER: 'Vendeur' };
+export const ROLES: Record<string, string> = { MANAGER: 'Responsable', SELLER: 'Vendeur' };
 
 export const GRADES: Record<string, string> = { LIKE_NEW: 'Comme neuf', VERY_GOOD: 'Très bon état', GOOD: 'Bon état', FAIR: 'État correct' };
 

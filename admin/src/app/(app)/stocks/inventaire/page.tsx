@@ -43,7 +43,7 @@ export default function InventoryCountPage() {
   const { notify } = useToast();
   const [products, setProducts] = useState<AdminProduct[] | null>(null);
   const [counts, setCounts] = useState<Record<string, string>>({});
-  const [kind, setKind] = useState<'ALL' | 'ACCESSORY' | 'PART'>('ALL');
+  const [kind, setKind] = useState<'ALL' | 'PHONE' | 'ACCESSORY'>('ALL');
   const [q, setQ] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +114,7 @@ export default function InventoryCountPage() {
       <PageHeader title="Inventaire" back={{ href: '/stocks', label: 'Stocks' }} />
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          <Tabs value={kind} onChange={setKind} items={[{ value: 'ALL', label: 'Tous' }, { value: 'ACCESSORY', label: 'Accessoires' }, { value: 'PART', label: 'Pièces' }]} />
+          <Tabs value={kind} onChange={setKind} items={[{ value: 'ALL', label: 'Tous' }, { value: 'PHONE', label: 'Smartphones' }, { value: 'ACCESSORY', label: 'Accessoires' }]} />
           <div className="mt-3">
             <SearchInput value={q} onChange={setQ} placeholder="Filtrer" />
           </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { HoursPanel } from '@/components/admin/settings/hours-panel';
-import { BrandsPanel, CategoriesPanel, RepairTypesPanel } from '@/components/admin/settings/reference-panels';
+import { BrandsPanel, CategoriesPanel } from '@/components/admin/settings/reference-panels';
 import { CheckoutPanel, IdentityPanel, LegalPanel, SiteImagesPanel, type Settings } from '@/components/admin/settings/shop-settings';
 import { PageHeader, Tabs } from '@/components/admin/ui';
 import { ErrorState } from '@/components/ui/empty-state';
@@ -35,8 +35,7 @@ export default function SettingsPage() {
           { value: 'images', label: 'Photos du site' },
           { value: 'legal', label: 'Mentions légales' },
           { value: 'categories', label: 'Catégories' },
-          { value: 'brands', label: 'Marques et modèles' },
-          { value: 'types', label: 'Types de panne' },
+          { value: 'brands', label: 'Marques' },
         ]}
       />
       <div className="mt-6 max-w-5xl">
@@ -47,7 +46,6 @@ export default function SettingsPage() {
         {tab === 'legal' && <LegalPanel key={String(data.settings.updatedAt)} settings={data.settings} onSaved={onSaved} />}
         {tab === 'categories' && <CategoriesPanel />}
         {tab === 'brands' && <BrandsPanel />}
-        {tab === 'types' && <RepairTypesPanel />}
       </div>
     </>
   );

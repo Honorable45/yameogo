@@ -44,9 +44,9 @@ export class SearchController {
 
     return {
       results: [
-        ...orders.map((o) => ({ type: 'order', id: o.id, title: o.number, subtitle: o.customerName, href: `/admin/commandes/${o.id}` })),
-        ...customers.map((c) => ({ type: 'customer', id: c.id, title: c.name, subtitle: c.phone, href: `/admin/clients/${c.id}` })),
-        ...products.map((p) => ({ type: 'product', id: p.id, title: p.name, subtitle: `${p.sku} · stock ${p.stockQuantity}`, href: `/admin/catalogue/${p.groupId}` })),
+        ...orders.map((o) => ({ type: 'order', id: o.id, title: o.number, subtitle: o.customerName, href: `/commandes/${o.id}` })),
+        ...customers.map((c) => ({ type: 'customer', id: c.id, title: c.name, subtitle: c.phone, href: `/clients/${c.id}` })),
+        ...products.map((p) => ({ type: 'product', id: p.id, title: p.name, subtitle: `${p.sku} · stock ${p.stockQuantity}`, href: `/catalogue/${p.groupId}` })),
       ],
     };
   }

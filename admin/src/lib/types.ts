@@ -98,8 +98,6 @@ export interface PublicSettings {
   logoUrl: string | null;
   heroImageUrl: string | null;
   heroImageAlt: string | null;
-  repairImageUrl: string | null;
-  repairImageAlt: string | null;
   phonesImageUrl: string | null;
   phonesImageAlt: string | null;
   phone: string | null;
@@ -117,7 +115,7 @@ export interface PublicSettings {
     publicationDirector: string | null;
     hostingProvider: string | null;
   };
-  repairWarrantyText: string | null;
+  deliveryInfo: string | null;
   openingHours: OpeningHour[];
   checkout: {
     deliveryEnabled: boolean;
@@ -129,23 +127,9 @@ export interface PublicSettings {
   };
 }
 
-export interface RepairCatalog {
-  brands: ShopBrand[];
-  types: { id: string; name: string; slug: string; description: string | null }[];
-}
-
-export interface RepairEstimate {
-  partsPrice: number;
-  laborPrice: number;
-  totalPrice: number;
-  durationMinutes: number | null;
-  conditions: string | null;
-}
-
 export interface PublicReview {
   id: string;
   rating: number;
-  ratingRepair: number | null;
   ratingWelcome: number | null;
   ratingValue: number | null;
   comment: string | null;
@@ -162,7 +146,6 @@ export interface ReviewsPage extends Paginated<PublicReview> {
     count: number;
     verifiedCount: number;
     average: number | null;
-    averageRepair: number | null;
     averageWelcome: number | null;
     averageValue: number | null;
   };

@@ -162,7 +162,7 @@ export function PurchaseForm({ draft, suppliers: initialSuppliers }: { draft?: P
                     <span>
                       {p.name} <span className="font-mono text-[12px] text-muted">{p.sku}</span>
                     </span>
-                    <span className="text-[12.5px] text-muted">{p.kind === 'PART' ? 'Pièce' : 'Accessoire'}</span>
+                    <span className="text-[12.5px] text-muted">{p.kind === 'PHONE' ? 'Smartphone' : 'Accessoire'}</span>
                   </button>
                 </li>
               ))}

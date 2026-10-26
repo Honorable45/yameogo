@@ -7,15 +7,14 @@ import { formatAmount, formatPrice } from '@/lib/format';
  * Couleurs des activités — palette validée (lisibilité daltonisme, contraste sur fond blanc).
  * L'ordre est fixe : une activité garde toujours sa couleur.
  */
-export const ACTIVITY_COLORS = { accessories: '#3461b5', phones: '#d4782a', repairs: '#14a378' } as const;
-export const ACTIVITY_LABELS = { accessories: 'Accessoires', phones: 'Téléphones d’occasion', repairs: 'Réparations' } as const;
+export const ACTIVITY_COLORS = { phones: '#3461b5', accessories: '#d4782a' } as const;
+export const ACTIVITY_LABELS = { phones: 'Smartphones', accessories: 'Accessoires' } as const;
 
 export interface Point {
   bucket: string;
   revenue: number;
   accessories: number;
   phones: number;
-  repairs: number;
   delivery: number;
   directCosts: number;
   grossMargin: number;
@@ -66,17 +65,17 @@ function Legend({ rows }: { rows: { key: string; label: string; color: string; d
   );
 }
 
-const ACTIVITY_ROWS = (['accessories', 'phones', 'repairs'] as const).map((k) => ({ key: k, label: ACTIVITY_LABELS[k], color: ACTIVITY_COLORS[k] }));
+const ACTIVITY_ROWS = (['phones', 'accessories'] as const).map((k) => ({ key: k, label: ACTIVITY_LABELS[k], color: ACTIVITY_COLORS[k] }));
 
 /** Chiffre d'affaires empilé par activité. */
 export function RevenueChart({ data }: { data: Point[] }) {
-  const empty = data.every((d) => d.accessories + d.phones + d.repairs === 0);
+  const empty = data.every((d) => d.accessories + d.phones === 0);
   return (
     <figure>
       <Legend rows={ACTIVITY_ROWS} />
       <div className="mt-3 h-64">
         {empty ? (
-          <p className="flex h-full items-center justify-center text-[13.5px] text-muted">Aucune vente ni réparation terminée sur la période.</p>
+          <p className="flex h-full items-center justify-center text-[13.5px] text-muted">Aucune vente terminée sur la période.</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} barCategoryGap="22%">
@@ -136,7 +135,7 @@ export function SeriesTable({ data }: { data: Point[] }) {
         <thead>
           <tr className="border-b border-line text-left text-[11px] uppercase tracking-[0.08em] text-muted">
             <th className="py-2 pr-3 font-medium">Période</th>
-            {['Accessoires', 'Téléphones', 'Réparations', 'Livraison', 'CA', 'Coûts directs', 'Marge brute', 'Encaissé', 'Dépenses'].map((h) => (
+            {['Smartphones', 'Accessoires', 'Livraison', 'CA', 'Coûts directs', 'Marge brute', 'Encaissé', 'Dépenses'].map((h) => (
               <th key={h} className="px-2 text-right font-medium">
                 {h}
               </th>
@@ -147,7 +146,7 @@ export function SeriesTable({ data }: { data: Point[] }) {
           {data.map((d) => (
             <tr key={d.bucket} className="border-b border-line last:border-0">
               <td className="py-1.5 pr-3">{bucketLabel(d.bucket, true)}</td>
-              {[d.accessories, d.phones, d.repairs, d.delivery, d.revenue, d.directCosts, d.grossMargin, d.cashIn, d.expenses].map((v, i) => (
+              {[d.phones, d.accessories, d.delivery, d.revenue, d.directCosts, d.grossMargin, d.cashIn, d.expenses].map((v, i) => (
                 <td key={i} className="num px-2 text-right">
                   {formatAmount(v)}
                 </td>

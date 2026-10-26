@@ -49,8 +49,10 @@ function Sidebar({ queue, onNavigate }: { queue: Queue | undefined; onNavigate?:
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <Link href="/" onClick={onNavigate} className="flex items-baseline gap-2">
-          <span className="font-serif text-[23px] font-semibold leading-none tracking-[-0.02em]">TH</span>
-          <span className="text-[10.5px] font-medium uppercase tracking-[0.26em] text-ink-2">Store</span>
+          <span className="flex items-baseline text-[15px] font-semibold uppercase leading-none tracking-[0.24em] text-ink">
+            YAMEOGO
+            <span className="ml-0.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+          </span>
         </Link>
       </div>
       <nav aria-label="Administration" className="flex-1 overflow-y-auto px-3 py-4">
@@ -201,7 +203,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <Search className="size-4" />
             <span className="flex-1 truncate">
               <span className="sm:hidden">Rechercher…</span>
-              <span className="hidden sm:inline">Rechercher un dossier, un client, un article…</span>
+              <span className="hidden sm:inline">Rechercher une vente, un client, un produit…</span>
             </span>
             <kbd className="hidden rounded-xs border border-line px-1.5 font-mono text-[11px] text-muted sm:inline">Ctrl K</kbd>
           </button>

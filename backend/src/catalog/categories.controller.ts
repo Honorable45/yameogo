@@ -66,7 +66,7 @@ export class CategoriesController {
     return this.prisma.category.findMany({
       where: kind ? { kind } : undefined,
       orderBy: [{ kind: 'asc' }, { position: 'asc' }, { name: 'asc' }],
-      include: { _count: { select: { products: true } } },
+      include: { _count: { select: { products: true, groups: true } } },
     });
   }
 

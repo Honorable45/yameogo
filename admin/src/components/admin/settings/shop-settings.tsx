@@ -15,9 +15,9 @@ export type Settings = Record<string, string | number | boolean | null>;
 
 const TEXT_FIELDS: { key: string; label: string; hint?: string; wide?: boolean; long?: boolean }[] = [
   { key: 'shopName', label: 'Nom commercial' },
-  { key: 'tagline', label: 'Accroche', hint: 'Une phrase courte affichée en pied de page.' },
+  { key: 'tagline', label: 'Accroche', hint: 'Affichée sous le nom sur l’accueil. Ex. « Smartphones et accessoires ».' },
   { key: 'phone', label: 'Téléphone', hint: 'Format international conseillé : +228 90 00 00 00' },
-  { key: 'whatsapp', label: 'Numéro WhatsApp', hint: 'Avec l’indicatif pays, pour les liens « Écrire sur WhatsApp ».' },
+  { key: 'whatsapp', label: 'Numéro WhatsApp de la boutique', hint: 'Indispensable aux commandes : avec l’indicatif pays, ex. +228 90 00 00 00. Sans numéro, le bouton « Commander sur WhatsApp » est désactivé.' },
   { key: 'email', label: 'E-mail' },
   { key: 'addressLine', label: 'Adresse', hint: 'Rue, quartier, point de repère.' },
   { key: 'city', label: 'Ville' },
@@ -62,7 +62,7 @@ function useSettingsForm(initial: Settings, keys: string[], onSaved: (s: Setting
 }
 
 export function IdentityPanel({ settings, onSaved }: { settings: Settings; onSaved: (s: Settings) => void }) {
-  const keys = [...TEXT_FIELDS.map((f) => f.key), 'repairWarrantyText'];
+  const keys = [...TEXT_FIELDS.map((f) => f.key), 'deliveryInfo'];
   const f = useSettingsForm(settings, keys, onSaved);
   return (
     <Panel title="Boutique et coordonnées">
@@ -73,8 +73,8 @@ export function IdentityPanel({ settings, onSaved }: { settings: Settings; onSav
             {(p) => <Input {...p} value={String(f.values[t.key] ?? '')} onChange={(e) => f.setValues({ ...f.values, [t.key]: e.target.value })} />}
           </Field>
         ))}
-        <Field label="Conditions de garantie des réparations" optional className="sm:col-span-2">
-          {(p) => <Textarea {...p} rows={2} value={String(f.values.repairWarrantyText ?? '')} onChange={(e) => f.setValues({ ...f.values, repairWarrantyText: e.target.value })} maxLength={600} />}
+        <Field label="Livraison et paiement" optional className="sm:col-span-2" hint="Affiché dans le panier et sur la page Contact. Ex. zones livrées, délais, frais, moyens de paiement acceptés.">
+          {(p) => <Textarea {...p} rows={3} value={String(f.values.deliveryInfo ?? '')} onChange={(e) => f.setValues({ ...f.values, deliveryInfo: e.target.value })} maxLength={1000} />}
         </Field>
       </div>
       <div className="mt-4"><FormError message={f.error} /></div>
@@ -138,7 +138,7 @@ export function CheckoutPanel({ settings, providerConfigured, onSaved }: { setti
 export function SiteImagesPanel({ settings, onSaved }: { settings: Settings; onSaved: (s: Settings) => void }) {
   const { notify } = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  const upload = async (kind: 'logo' | 'hero' | 'repair' | 'phones' | 'shop', file: File | undefined) => {
+  const upload = async (kind: 'logo' | 'hero' | 'phones' | 'shop', file: File | undefined) => {
     if (!file) return;
     setBusy(kind);
     const form = new FormData();
@@ -153,16 +153,15 @@ export function SiteImagesPanel({ settings, onSaved }: { settings: Settings; onS
       setBusy(null);
     }
   };
-  const items: { kind: 'logo' | 'hero' | 'repair' | 'phones' | 'shop'; label: string; url: string | null; hint: string; altKey?: string }[] = [
-    { kind: 'hero', label: 'Photo d’accueil principale', url: settings.heroImageUrl as string | null, hint: 'Grande image de la mosaïque d’accueil.', altKey: 'heroImageAlt' },
-    { kind: 'phones', label: 'Photo « Téléphones »', url: settings.phonesImageUrl as string | null, hint: 'Accueil (mosaïque) et vignette Téléphones.', altKey: 'phonesImageAlt' },
-    { kind: 'repair', label: 'Photo de l’atelier', url: settings.repairImageUrl as string | null, hint: 'Section « Réparation » de l’accueil.', altKey: 'repairImageAlt' },
-    { kind: 'shop', label: 'Photo de la boutique', url: settings.shopImageUrl as string | null, hint: 'Page « Boutique ».', altKey: 'shopImageAlt' },
+  const items: { kind: 'logo' | 'hero' | 'phones' | 'shop'; label: string; url: string | null; hint: string; altKey?: string }[] = [
+    { kind: 'hero', label: 'Photo d’accueil', url: settings.heroImageUrl as string | null, hint: 'Image plein écran de l’accueil.', altKey: 'heroImageAlt' },
+    { kind: 'phones', label: 'Photo « Smartphones »', url: settings.phonesImageUrl as string | null, hint: 'Bandeau du catalogue des smartphones.', altKey: 'phonesImageAlt' },
+    { kind: 'shop', label: 'Photo de la boutique', url: settings.shopImageUrl as string | null, hint: 'Page « Contact ».', altKey: 'shopImageAlt' },
     { kind: 'logo', label: 'Logo', url: settings.logoUrl as string | null, hint: 'Facultatif : sans logo, le nom s’affiche en typographie.' },
   ];
   return (
     <Panel title="Photos du site">
-      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => (
           <li key={it.kind}>
             <p className="text-[13.5px] font-medium">{it.label}</p>

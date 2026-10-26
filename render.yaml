@@ -29,7 +29,7 @@ services:
         sync: false
       - key: APP_SECRET
         generateValue: true
-      # openssl rand -base64 32 — à conserver dans un coffre : sans elle, les IMEI sont illisibles.
+      # openssl rand -base64 32 — à conserver dans un coffre : sans elle, les codes d'avis déjà émis sont illisibles.
       - key: DATA_ENCRYPTION_KEY
         sync: false
       - key: COOKIE_SECURE

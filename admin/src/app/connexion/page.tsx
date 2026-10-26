@@ -45,8 +45,10 @@ export default function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12">
         <a href="/" className="flex items-baseline gap-2">
-          <span className="font-serif text-[25px] font-semibold leading-none">TH</span>
-          <span className="text-[11px] font-medium uppercase tracking-[0.28em] text-ink-2">Store</span>
+          <span className="flex items-baseline text-[16px] font-semibold uppercase leading-none tracking-[0.24em] text-ink">
+            YAMEOGO
+            <span className="ml-0.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+          </span>
         </a>
         <div className="mx-auto w-full max-w-sm py-12">
           <p className="eyebrow">Espace équipe</p>
@@ -60,9 +62,9 @@ export default function LoginPage() {
       </div>
       <div className="hidden bg-ink lg:flex lg:flex-col lg:justify-end lg:p-12">
         <div className="max-w-md text-paper">
-          <p className="display text-[30px] leading-tight">Réparations, ventes et stocks, au même endroit.</p>
+          <p className="display text-[30px] leading-tight">Catalogue, ventes et stocks, au même endroit.</p>
           <ul className="mt-8 space-y-3 text-[14.5px] text-paper/70">
-            <li>— Chaque dossier garde l’historique de ses devis, pièces et paiements.</li>
+            <li>— Chaque produit a ses configurations, avec leur prix et leur stock.</li>
             <li>— Les marges sont calculées à partir des coûts réellement enregistrés.</li>
             <li>— Les stocks bougent uniquement par des opérations traçables.</li>
           </ul>

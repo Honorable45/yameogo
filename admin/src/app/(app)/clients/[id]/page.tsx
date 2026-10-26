@@ -12,7 +12,7 @@ import { Status } from '@/components/ui/status';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { formatDate, formatPhone, formatPrice, whatsappLink } from '@/lib/format';
-import { ORDER_STATUS, REPAIR_STATUS, SETTLEMENT } from '@/lib/labels';
+import { ORDER_STATUS, SETTLEMENT } from '@/lib/labels';
 import { useResource } from '@/lib/use-resource';
 
 interface Customer {
@@ -23,7 +23,6 @@ interface Customer {
   notes: string | null;
   createdAt: string;
   orders?: { id: string; number: string; status: string; total: number; paymentStatus: string; createdAt: string; channel: string }[];
-  repairJobs: { id: string; number: string; status: string; brandName: string; modelName: string; billedAmount: number; paymentStatus: string; receivedAt: string }[];
 }
 
 export default function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
@@ -90,26 +89,6 @@ export default function CustomerPage({ params }: { params: Promise<{ id: string 
       )}
       {c.notes && !editing && <p className="mb-6 max-w-2xl border-l-2 border-line-2 pl-3 text-[14px] text-ink-2">{c.notes}</p>}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title={`Réparations (${c.repairJobs.length})`} bodyClassName="">
-          {c.repairJobs.length === 0 ? <p className="px-5 py-5 text-[13.5px] text-muted">Aucune réparation.</p> : (
-            <ul className="divide-y divide-line">
-              {c.repairJobs.map((r) => (
-                <li key={r.id}>
-                  <Link href={`/reparations/${r.id}`} className="flex items-start justify-between gap-3 px-5 py-3 hover:bg-paper/70">
-                    <span>
-                      <span className="block text-[14px] font-medium">{r.brandName} {r.modelName}</span>
-                      <span className="text-[12.5px] text-muted"><span className="font-mono">{r.number}</span> · {formatDate(r.receivedAt)}</span>
-                    </span>
-                    <span className="flex flex-col items-end gap-1">
-                      <Status tone={REPAIR_STATUS[r.status].tone}>{REPAIR_STATUS[r.status].label}</Status>
-                      {r.billedAmount > 0 && <span className="num text-[12.5px] text-muted">{formatPrice(r.billedAmount)} · {SETTLEMENT[r.paymentStatus].label.toLowerCase()}</span>}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
         {c.orders && (
           <Panel title={`Commandes (${c.orders.length})`} bodyClassName="">
             {c.orders.length === 0 ? <p className="px-5 py-5 text-[13.5px] text-muted">Aucune commande.</p> : (

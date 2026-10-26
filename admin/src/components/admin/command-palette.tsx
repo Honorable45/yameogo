@@ -1,6 +1,6 @@
 'use client';
 
-import { Package, ReceiptText, Search, Smartphone, UserRound, Wrench } from 'lucide-react';
+import { Package, ReceiptText, Search, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
@@ -9,17 +9,17 @@ import { useDebounced } from '@/lib/use-resource';
 import { Spinner } from '@/components/ui/spinner';
 
 interface Result {
-  type: 'repair' | 'order' | 'customer' | 'product' | 'phone';
+  type: 'order' | 'customer' | 'product';
   id: string;
   title: string;
   subtitle: string;
   href: string;
 }
 
-const ICONS = { repair: Wrench, order: ReceiptText, customer: UserRound, product: Package, phone: Smartphone };
-const TYPES = { repair: 'Réparation', order: 'Commande', customer: 'Client', product: 'Article', phone: 'Occasion' };
+const ICONS = { order: ReceiptText, customer: UserRound, product: Package };
+const TYPES = { order: 'Vente', customer: 'Client', product: 'Produit' };
 
-/** Recherche globale : numéros de dossier, clients (nom ou téléphone), articles, commandes. */
+/** Recherche globale : ventes, clients (nom ou téléphone), produits et leurs références. */
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
@@ -91,7 +91,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               setActive((a) => Math.max(a - 1, 0));
             } else if (e.key === 'Enter' && results[active]) go(results[active]);
           }}
-          placeholder="N° de dossier, nom, téléphone, référence…"
+          placeholder="N° de vente, nom, téléphone, produit, référence…"
           className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
           aria-label="Rechercher"
         />

@@ -28,8 +28,7 @@ interface UserRow {
 
 const ROLE_HELP: Record<string, string> = {
   MANAGER: 'Accès complet : finances, prix, stocks, utilisateurs, paramètres.',
-  TECHNICIAN: 'Dossiers de réparation, diagnostics, devis, pièces et coûts de réparation. Ne voit pas les marges.',
-  SELLER: 'Ventes, commandes, consultation du catalogue et des stocks, encaissement et remise des réparations. Ne voit pas les coûts.',
+  SELLER: 'Ventes, commandes, consultation du catalogue et des stocks, encaissement, codes d’avis. Ne voit pas les coûts ni les marges et ne modifie pas les produits.',
 };
 
 function UserDialog({ user, onClose, onSaved }: { user: UserRow | 'new' | null; onClose: () => void; onSaved: () => void }) {

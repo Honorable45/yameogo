@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { api, errorMessage } from '@/lib/api';
-import type { BrandWithModels, CategoryRow, RepairTypeRow } from '@/lib/admin-types';
+import type { BrandRow, CategoryRow } from '@/lib/admin-types';
 import { cn } from '@/lib/cn';
 import { useResource } from '@/lib/use-resource';
 import { Button } from '@/components/ui/button';
@@ -72,19 +72,19 @@ function useAction() {
 
 export function CategoriesPanel() {
   const run = useAction();
-  const [kind, setKind] = useState<'ACCESSORY' | 'PART'>('ACCESSORY');
+  const [kind, setKind] = useState<'PHONE' | 'ACCESSORY'>('ACCESSORY');
   const { data, reload } = useResource<CategoryRow[]>('/categories');
   if (!data) return <LoadingBlock />;
   return (
     <Panel title="Catégories" bodyClassName="" actions={
-      <Select value={kind} onChange={(e) => setKind(e.target.value as 'ACCESSORY' | 'PART')} className="h-9 w-48 sm:h-9" aria-label="Type">
-        <option value="ACCESSORY">Accessoires (boutique)</option>
-        <option value="PART">Pièces détachées</option>
+      <Select value={kind} onChange={(e) => setKind(e.target.value as 'PHONE' | 'ACCESSORY')} className="h-9 w-48 sm:h-9" aria-label="Type">
+        <option value="ACCESSORY">Accessoires</option>
+        <option value="PHONE">Smartphones</option>
       </Select>
     }>
       <ul className="divide-y divide-line">
         {data.filter((c) => c.kind === kind).map((c) => (
-          <EditableRow key={c.id} name={c.name} active={c.active} meta={`${c._count.products} article(s)`} onSave={(patch) => run(() => api.patch(`/categories/${c.id}`, patch), 'Catégorie mise à jour.', reload)} />
+          <EditableRow key={c.id} name={c.name} active={c.active} meta={`${c._count.groups ?? c._count.products} produit(s)`} onSave={(patch) => run(() => api.patch(`/categories/${c.id}`, patch), 'Catégorie mise à jour.', reload)} />
         ))}
       </ul>
       <AddRow placeholder="Nouvelle catégorie" onAdd={(name) => run(() => api.post('/categories', { name, kind }), 'Catégorie ajoutée.', reload)} />
@@ -94,57 +94,17 @@ export function CategoriesPanel() {
 
 export function BrandsPanel() {
   const run = useAction();
-  const { data, reload } = useResource<BrandWithModels[]>('/brands');
-  const [brandId, setBrandId] = useState('');
-  if (!data) return <LoadingBlock />;
-  const brand = data.find((b) => b.id === brandId) ?? data[0];
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Panel title="Marques" bodyClassName="">
-        <ul className="divide-y divide-line">
-          {data.map((b) => (
-            <li key={b.id} className={cn(brand?.id === b.id && 'bg-paper')}>
-              <div className="flex items-center">
-                <button type="button" onClick={() => setBrandId(b.id)} className="flex-1 px-5 py-2 text-left text-[14px]">
-                  {b.name} <span className="text-[12px] text-faint">{b.models.length} modèle(s)</span>
-                  {!b.active && <Tag className="ml-2">Désactivée</Tag>}
-                </button>
-                <button type="button" className="px-4 text-[12.5px] text-muted underline" onClick={() => run(() => api.patch(`/brands/${b.id}`, { active: !b.active }), 'Marque mise à jour.', reload)}>
-                  {b.active ? 'Désactiver' : 'Activer'}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <AddRow placeholder="Nouvelle marque" onAdd={(name) => run(() => api.post('/brands', { name, position: data.length }), 'Marque ajoutée.', reload)} />
-      </Panel>
-      {brand && (
-        <Panel title={`Modèles ${brand.name}`} bodyClassName="">
-          <ul className="max-h-[28rem] divide-y divide-line overflow-y-auto">
-            {brand.models.map((m) => (
-              <EditableRow key={m.id} name={m.name} active={m.active} onSave={(patch) => run(() => api.patch(`/brands/models/${m.id}`, patch), 'Modèle mis à jour.', reload)} />
-            ))}
-          </ul>
-          <AddRow placeholder={`Nouveau modèle ${brand.name}`} onAdd={(name) => run(() => api.post(`/brands/${brand.id}/models`, { name, position: brand.models.length }), 'Modèle ajouté.', reload)} />
-        </Panel>
-      )}
-    </div>
-  );
-}
-
-export function RepairTypesPanel() {
-  const run = useAction();
-  const { data, reload } = useResource<RepairTypeRow[]>('/repair-pricing/types');
+  const { data, reload } = useResource<BrandRow[]>('/brands');
   if (!data) return <LoadingBlock />;
   return (
-    <Panel title="Types de panne" bodyClassName="">
-      <p className="px-5 pt-4 text-[13.5px] text-muted">Proposés dans le devis en ligne et dans les dossiers. Les tarifs se règlent dans « Tarifs de réparation ».</p>
+    <Panel title="Marques" bodyClassName="">
+      <p className="px-5 pt-4 text-[13.5px] text-muted">Proposées dans les filtres du site. Une marque saisie sur une fiche produit est ajoutée automatiquement.</p>
       <ul className="mt-2 divide-y divide-line">
-        {data.map((t) => (
-          <EditableRow key={t.id} name={t.name} active={t.active} onSave={(patch) => run(() => api.patch(`/repair-pricing/types/${t.id}`, patch), 'Type de panne mis à jour.', reload)} />
+        {data.map((b) => (
+          <EditableRow key={b.id} name={b.name} active={b.active} meta={`${b._count.groups} produit(s)`} onSave={(patch) => run(() => api.patch(`/brands/${b.id}`, patch), 'Marque mise à jour.', reload)} />
         ))}
       </ul>
-      <AddRow placeholder="Nouveau type de panne" onAdd={(name) => run(() => api.post('/repair-pricing/types', { name, position: data.length }), 'Type de panne ajouté.', reload)} />
+      <AddRow placeholder="Nouvelle marque" onAdd={(name) => run(() => api.post('/brands', { name, position: data.length }), 'Marque ajoutée.', reload)} />
     </Panel>
   );
 }

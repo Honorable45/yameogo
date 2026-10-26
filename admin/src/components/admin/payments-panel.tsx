@@ -15,7 +15,7 @@ import { ConfirmDialog, Panel } from './ui';
 import { useCan } from './session';
 
 /**
- * Paiements d'une commande ou d'une réparation.
+ * Paiements d'une vente.
  * Un paiement saisi ici est considéré comme confirmé : il ne doit l'être qu'après réception effective
  * des fonds (espèces reçues, transfert visible sur le téléphone de la boutique…).
  */

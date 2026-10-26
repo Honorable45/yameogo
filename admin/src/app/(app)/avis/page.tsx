@@ -22,7 +22,6 @@ import { useList } from '@/lib/use-list';
 interface ReviewRow {
   id: string;
   rating: number;
-  ratingRepair: number | null;
   ratingWelcome: number | null;
   ratingValue: number | null;
   comment: string | null;
@@ -34,7 +33,6 @@ interface ReviewRow {
   moderationNote: string | null;
   moderatedAt: string | null;
   createdAt: string;
-  repairJob: { id: string; number: string } | null;
   order: { id: string; number: string } | null;
   moderatedBy: { name: string } | null;
 }
@@ -52,7 +50,7 @@ function QrPanel() {
       <div className="flex items-start gap-4">
         <QrCode value={url} size={112} />
         <div className="text-[13.5px]">
-          <p className="text-ink-2">À afficher au comptoir : il ouvre la page d’avis, où le client saisit le code reçu pour sa réparation ou son achat. Sans code, pas d’avis.</p>
+          <p className="text-ink-2">À afficher au comptoir : il ouvre la page d’avis, où le client saisit le code imprimé sur son ticket ou reçu sur WhatsApp. Sans code, pas d’avis.</p>
           <p className="mt-2 break-all font-mono text-[12px] text-muted">{url}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={() => setPrinting(true)}>
@@ -116,9 +114,8 @@ function ReviewCard({ r, onChanged }: { r: ReviewRow; onChanged: () => void }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <Stars value={r.rating} />
         {r.status !== 'PUBLISHED' && <Status tone={REVIEW_STATUS[r.status].tone}>{REVIEW_STATUS[r.status].label}</Status>}
-        {r.repairJob && <Link href={`/reparations/${r.repairJob.id}`} className="font-mono text-[12.5px] text-accent underline">{r.repairJob.number}</Link>}
         {r.order && <Link href={`/commandes/${r.order.id}`} className="font-mono text-[12.5px] text-accent underline">{r.order.number}</Link>}
-        {!r.repairJob && !r.order && <Tag>Sans code</Tag>}
+        {!r.order && <Tag>Sans code</Tag>}
         <span className="text-[12.5px] text-muted">
           {r.serviceLabel} · {formatDateTime(r.createdAt)}
           {r.displayName ? ` · ${r.displayName}` : ''}
@@ -126,7 +123,7 @@ function ReviewCard({ r, onChanged }: { r: ReviewRow; onChanged: () => void }) {
       </div>
       {r.comment ? <p className="mt-2 text-[14.5px] leading-relaxed">{r.comment}</p> : <p className="mt-2 text-[13.5px] italic text-muted">Sans commentaire</p>}
       <p className="mt-1.5 text-[12.5px] text-muted">
-        {[r.ratingRepair && `Réparation ${r.ratingRepair}/5`, r.ratingWelcome && `Accueil ${r.ratingWelcome}/5`, r.ratingValue && `Qualité-prix ${r.ratingValue}/5`].filter(Boolean).join(' · ')}
+        {[r.ratingWelcome && `Accueil ${r.ratingWelcome}/5`, r.ratingValue && `Qualité-prix ${r.ratingValue}/5`].filter(Boolean).join(' · ')}
       </p>
       {r.shopReply && !replying && <p className="mt-2 border-l-2 border-line-2 pl-3 text-[13.5px] text-ink-2">Réponse : {r.shopReply}</p>}
       {replying && (

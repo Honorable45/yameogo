@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Minus, Plus, Printer, Smartphone, Trash2 } from 'lucide-react';
+import { Check, Minus, Plus, Printer, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CustomerPicker, type CustomerChoice } from '@/components/admin/customer-picker';
@@ -17,19 +17,9 @@ import { PAYMENT_METHODS } from '@/lib/labels';
 import { useDebounced } from '@/lib/use-resource';
 import { printSaleTicket, type TicketOrder } from '@/components/admin/receipts';
 
-interface PhoneHit {
-  id: string;
-  reference: string;
-  title: string;
-  salePrice: number;
-  status: string;
-  brand: { name: string };
-}
-
 interface Line {
   key: string;
   productId?: string;
-  usedPhoneId?: string;
   label: string;
   sku: string;
   catalogPrice: number;
@@ -51,7 +41,6 @@ export default function CounterSalePage() {
   const [q, setQ] = useState('');
   const term = useDebounced(q, 200);
   const [products, setProducts] = useState<AdminProduct[]>([]);
-  const [phones, setPhones] = useState<PhoneHit[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
   const [customer, setCustomer] = useState<CustomerChoice>({ name: '', phone: '' });
   const [payments, setPayments] = useState<Pay[]>([{ method: 'CASH', amount: '', ref: '' }]);
@@ -61,8 +50,7 @@ export default function CounterSalePage() {
 
   useEffect(() => {
     const qq = encodeURIComponent(term.trim());
-    api.get<{ items: AdminProduct[] }>(`/products?pageSize=10&q=${qq}`).then((r) => setProducts(r.items.filter((p) => p.kind === 'ACCESSORY' || p.salePrice > 0))).catch(() => setProducts([]));
-    api.get<{ items: PhoneHit[] }>(`/used-phones?status=AVAILABLE&pageSize=6&q=${qq}`).then((r) => setPhones(r.items)).catch(() => setPhones([]));
+    api.get<{ items: AdminProduct[] }>(`/products?pageSize=12&q=${qq}`).then((r) => setProducts(r.items)).catch(() => setProducts([]));
   }, [term, done]);
 
   const total = lines.reduce((acc, l) => acc + l.unitPrice * l.quantity, 0);
@@ -80,9 +68,6 @@ export default function CounterSalePage() {
       if (existing) return ls.map((l) => (l.key === key ? { ...l, quantity: Math.min(l.quantity + 1, l.max) } : l));
       return [...ls, { key, productId: p.id, label: p.name, sku: p.sku, catalogPrice: p.salePrice, unitPrice: p.salePrice, quantity: 1, max: p.available }];
     });
-  };
-  const addPhone = (p: PhoneHit) => {
-    setLines((ls) => (ls.find((l) => l.key === `t:${p.id}`) ? ls : [...ls, { key: `t:${p.id}`, usedPhoneId: p.id, label: `${p.brand.name} ${p.title}`, sku: p.reference, catalogPrice: p.salePrice, unitPrice: p.salePrice, quantity: 1, max: 1 }]));
   };
   const setLine = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
@@ -109,7 +94,6 @@ export default function CounterSalePage() {
         customerPhone: customer.phone.trim() || undefined,
         items: lines.map((l) => ({
           productId: l.productId,
-          usedPhoneId: l.usedPhoneId,
           quantity: l.quantity,
           unitPrice: canPrice && l.unitPrice !== l.catalogPrice ? l.unitPrice : undefined,
         })),
@@ -157,23 +141,9 @@ export default function CounterSalePage() {
       <div className="grid gap-6 lg:grid-cols-12">
         <Panel title="Articles" className="lg:col-span-6" bodyClassName="">
           <div className="border-b border-line p-3">
-            <SearchInput value={q} onChange={setQ} placeholder="Nom, référence, modèle de téléphone…" />
+            <SearchInput value={q} onChange={setQ} placeholder="Modèle, couleur, référence…" />
           </div>
           <ul className="max-h-[62vh] divide-y divide-line overflow-y-auto">
-            {phones.map((p) => (
-              <li key={p.id}>
-                <button type="button" onClick={() => addPhone(p)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-paper">
-                  <Smartphone className="size-4 shrink-0 text-muted" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium">
-                      {p.brand.name} {p.title}
-                    </span>
-                    <span className="block font-mono text-[12px] text-muted">{p.reference} · occasion</span>
-                  </span>
-                  <span className="num text-[14px]">{formatPrice(p.salePrice)}</span>
-                </button>
-              </li>
-            ))}
             {products.map((p) => (
               <li key={p.id}>
                 <button type="button" disabled={p.available <= 0} onClick={() => addProduct(p)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-paper disabled:opacity-40">
@@ -181,14 +151,13 @@ export default function CounterSalePage() {
                     <span className="block truncate text-[14px] font-medium">{p.name}</span>
                     <span className="block text-[12px] text-muted">
                       <span className="font-mono">{p.sku}</span> · {p.available} disponible{p.available > 1 ? 's' : ''}
-                      {p.kind === 'PART' && ' · pièce'}
                     </span>
                   </span>
                   <span className="num text-[14px]">{formatPrice(p.salePrice)}</span>
                 </button>
               </li>
             ))}
-            {!products.length && !phones.length && <li className="px-4 py-8 text-center text-[14px] text-muted">Aucun article trouvé.</li>}
+            {!products.length && <li className="px-4 py-8 text-center text-[14px] text-muted">Aucun article trouvé.</li>}
           </ul>
         </Panel>
 

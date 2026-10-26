@@ -24,8 +24,8 @@ import { useDebounced, useResource } from '@/lib/use-resource';
 interface Summary {
   stockValue: number | null;
   units: number;
-  usedPhonesValue: number | null;
-  usedPhonesInStock: number;
+  phonesValue: number | null;
+  phonesInStock: number;
   alerts: {
     outOfStock: { id: string; name: string; sku: string; available: number; threshold: number }[];
     lowStock: { id: string; name: string; sku: string; available: number; threshold: number }[];
@@ -127,8 +127,8 @@ function StockTable() {
             <DataTable
               rows={list.data.items}
               columns={[
-                { key: 'name', header: 'Article', cell: (p) => <Link href={`/produits/${p.id}`} className="hover:underline"><span className="block font-medium">{p.name}</span><span className="font-mono text-[12px] text-muted">{p.sku}</span></Link> },
-                { key: 'kind', header: 'Type', cell: (p) => (p.kind === 'PART' ? 'Pièce' : 'Accessoire') },
+                { key: 'name', header: 'Article', cell: (p) => <Link href={`/catalogue/${p.group.id}`} className="hover:underline"><span className="block font-medium">{p.name}</span><span className="font-mono text-[12px] text-muted">{p.sku}</span></Link> },
+                { key: 'kind', header: 'Type', cell: (p) => (p.kind === 'PHONE' ? 'Smartphone' : 'Accessoire') },
                 { key: 'stock', header: 'En stock', align: 'right', cell: (p) => p.stockQuantity },
                 { key: 'reserved', header: 'Réservé', align: 'right', cell: (p) => p.reservedQuantity || '—' },
                 { key: 'available', header: 'Disponible', cell: (p) => <StockStatus p={p} /> },
@@ -304,9 +304,9 @@ function StocksView() {
               <Metric label="Valeur du stock" value={formatPrice(s.stockValue)} note={`${s.units} unités · coût moyen pondéré`} />
             </div>
           )}
-          {s.usedPhonesValue !== null && (
+          {s.phonesValue !== null && (
             <div className="bg-surface px-5 py-4">
-              <Metric label="Téléphones d’occasion" value={formatPrice(s.usedPhonesValue)} note={`${s.usedPhonesInStock} appareils, au prix d’achat`} />
+              <Metric label="Dont smartphones" value={formatPrice(s.phonesValue)} note={`${s.phonesInStock} téléphone(s)`} />
             </div>
           )}
           <div className="bg-surface px-5 py-4">

@@ -74,7 +74,7 @@ function parseLocalDate(value: string, tz: string): TZDate {
  * - toutes les bornes sont calculées dans le fuseau de la boutique (BUSINESS_TIMEZONE) ;
  * - une période est un intervalle [début, fin[ ; la semaine commence le lundi ;
  * - une opération est rattachée à la date de l'événement qui la rend effective
- *   (vente terminée, réparation terminée, paiement confirmé, date de la dépense).
+ *   (vente terminée, paiement confirmé, date de la dépense).
  */
 export function resolvePeriod(preset: PeriodPreset, tz: string, now: Date = new Date(), custom?: { from?: string; to?: string }): ResolvedPeriod {
   const local = new TZDate(now.getTime(), tz);

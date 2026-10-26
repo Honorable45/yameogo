@@ -26,10 +26,10 @@ interface ReviewCode {
 const display = (code: string) => code.replace(/(.{4})(?=.)/g, '$1-');
 
 /**
- * Code d'avis d'une réparation ou d'une vente : créé automatiquement, toujours visible ici,
+ * Code d'avis d'une vente : créé automatiquement, toujours visible ici,
  * à remettre au client (WhatsApp, impression ou QR code). Sans ce code, le client ne peut pas donner d'avis.
  */
-export function ReviewCodePanel({ kind, id, customerPhone }: { kind: 'reparation' | 'vente'; id: string; customerPhone?: string | null }) {
+export function ReviewCodePanel({ kind, id, customerPhone }: { kind: 'vente'; id: string; customerPhone?: string | null }) {
   const can = useCan();
   const siteUrl = useSiteUrl();
   const { notify } = useToast();

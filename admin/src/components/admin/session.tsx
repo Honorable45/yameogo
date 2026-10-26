@@ -6,7 +6,7 @@ export interface SessionUser {
   id: string;
   email: string;
   name: string;
-  role: 'MANAGER' | 'TECHNICIAN' | 'SELLER';
+  role: 'MANAGER' | 'SELLER';
   permissions: string[];
 }
 
