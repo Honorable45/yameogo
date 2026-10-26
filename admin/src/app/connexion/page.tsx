@@ -47,7 +47,7 @@ export default function LoginPage() {
         <a href="/" className="flex items-baseline gap-2">
           <span className="flex items-center uppercase leading-none text-ink">
             <span className="text-[16px] font-semibold tracking-[0.2em]">Yameogo</span>
-            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre" aria-hidden="true" />
             <span className="text-[10px] font-medium tracking-[0.3em] text-ink-2">Smart Tech</span>
           </span>
         </a>

@@ -1,7 +1,7 @@
 import { BadgeCheck } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { MoreLink, ProductGrid, SectionHeading, Stars } from '@/components/site/catalog';
+import { HeroLogoAnimation } from '@/components/site/hero-logo-animation';
 import { SocialLinks } from '@/components/site/social';
 import { formatDate } from '@/lib/format';
 import { serverGet } from '@/lib/server-api';
@@ -25,32 +25,6 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
   );
 }
 
-/**
- * Nom de la boutique : premier mot lettre par lettre, puis la suite qui se resserre (« SMART TECH »).
- * Renvoie aussi l'instant où l'animation est terminée, pour enchaîner l'accroche.
- */
-function HeroName({ name }: { name: string }) {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  const letters = [...first];
-  const restStart = 300 + letters.length * 85;
-  return (
-    <h1 aria-label={name}>
-      <span aria-hidden="true" className="block text-[58px] font-semibold uppercase leading-[0.95] tracking-[0.1em] sm:text-[108px] lg:text-[136px]">
-        {letters.map((l, i) => (
-          <span key={i} className="reveal-letter" style={{ animationDelay: `${300 + i * 85}ms` }}>
-            {l}
-          </span>
-        ))}
-      </span>
-      {rest.length > 0 && (
-        <span aria-hidden="true" className="reveal-tracking mt-4 block pl-[0.46em] text-[15px] font-medium uppercase text-white/85 sm:mt-5 sm:text-[22px] lg:text-[26px]" style={{ animationDelay: `${restStart}ms` }}>
-          {rest.join(' ')}
-        </span>
-      )}
-    </h1>
-  );
-}
-
 const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
 
 export default async function HomePage() {
@@ -64,41 +38,43 @@ export default async function HomePage() {
   ]);
   const shopName = settings?.shopName || 'Yameogo Smart Tech';
   const tagline = settings?.tagline || 'La qualité au meilleur prix';
-  // Enchaînement : nom (lettres puis suite), trait, accroche mot par mot, puis les boutons.
-  const nameEnd = 300 + [...shopName.split(' ')[0]].length * 85 + 700;
-  const taglineStart = nameEnd + 500;
-  const taglineEnd = taglineStart + tagline.split(' ').length * 140 + 300;
+  // Le slogan s'écrit pendant que le logo se compose, puis les boutons apparaissent.
+  const taglineStart = 900;
+  const taglineEnd = taglineStart + tagline.split(' ').length * 150 + 300;
 
   return (
     <>
-      {/* Accueil : image plein cadre */}
-      <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-navy text-white">
-        {settings?.heroImageUrl && <Image src={settings.heroImageUrl} alt={settings.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />}
-        {/* Voile uniforme : lisibilité du texte sur n'importe quelle photo. */}
-        <span className="absolute inset-0 bg-navy/60" aria-hidden="true" />
-        {/* Halo sombre au centre : contraste du nom quelle que soit la photo. */}
-        <span className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(21_23_28/0.45),transparent_65%)]" aria-hidden="true" />
-        <div className="relative px-6 pb-16 pt-40 text-center lg:pt-28">
-          <HeroName name={shopName} />
-          <span aria-hidden="true" className="reveal-line mx-auto mt-8 block h-px w-28 bg-gradient-to-r from-transparent via-white/80 to-transparent sm:mt-10 sm:w-40" style={{ animationDelay: `${nameEnd}ms` }} />
-          <p className="mx-auto mt-6 max-w-2xl font-serif text-[22px] italic leading-snug text-white/90 sm:mt-8 sm:text-[30px]">
-            <Reveal text={tagline} start={taglineStart} step={140} />
-          </p>
-          <nav aria-label="Rubriques" className="reveal-word mt-12 flex flex-wrap justify-center gap-3" style={{ animationDelay: `${taglineEnd}ms` }}>
-            <Link href="/telephones" className="inline-flex h-12 items-center rounded-full bg-white px-7 text-[15.5px] font-medium text-navy transition-transform hover:-translate-y-0.5">
-              Smartphones
-            </Link>
-            <Link href="/accessoires" className="glass inline-flex h-12 items-center rounded-full px-7 text-[15.5px] font-medium text-white transition-colors hover:bg-white/25">
-              Accessoires
-            </Link>
-            {promos.length > 0 && (
-              <Link href="/promotions" className="glass inline-flex h-12 items-center rounded-full px-7 text-[15.5px] font-medium text-white transition-colors hover:bg-white/25">
-                Promotions
+      {/* Accueil : slogan à gauche, logo animé à droite (au-dessus du texte sur mobile). */}
+      <section className="relative overflow-hidden bg-paper">
+        {/* Lueurs discrètes aux couleurs du logo. */}
+        <span className="pointer-events-none absolute -right-40 -top-40 size-[38rem] rounded-full bg-ochre/10 blur-3xl" aria-hidden="true" />
+        <span className="pointer-events-none absolute -bottom-48 -left-40 size-[36rem] rounded-full bg-navy/10 blur-3xl" aria-hidden="true" />
+        <div className="container-page relative grid min-h-[88svh] items-center gap-6 pb-14 pt-36 lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
+          <div className="flex justify-center lg:order-2 lg:col-span-6 lg:justify-end">
+            <HeroLogoAnimation className="w-full max-w-[420px] sm:max-w-[500px] lg:max-w-[560px]" />
+          </div>
+          <div className="text-center lg:order-1 lg:col-span-6 lg:text-left">
+            <h1 className="display text-[40px] leading-[1.05] text-navy sm:text-[56px] lg:text-[68px]">
+              <span className="sr-only">{shopName} — </span>
+              <Reveal text={tagline} start={taglineStart} step={150} />
+            </h1>
+            <span aria-hidden="true" className="reveal-line mx-auto mt-7 block h-[3px] w-20 origin-left rounded-full bg-gradient-to-r from-ochre to-[#f9a51a] lg:mx-0" style={{ animationDelay: `${taglineEnd - 200}ms` }} />
+            <nav aria-label="Rubriques" className="reveal-word mt-8 flex flex-wrap justify-center gap-3 lg:justify-start" style={{ animationDelay: `${taglineEnd}ms` }}>
+              <Link href="/telephones" className="inline-flex h-12 items-center rounded-full bg-navy px-7 text-[15.5px] font-medium text-white shadow-card transition-transform hover:-translate-y-0.5">
+                Smartphones
               </Link>
-            )}
-          </nav>
-          <div className="reveal-word mt-6" style={{ animationDelay: `${taglineEnd + 250}ms` }}>
-            <SocialLinks settings={settings} className="justify-center" />
+              <Link href="/accessoires" className="inline-flex h-12 items-center rounded-full border border-navy/25 bg-surface px-7 text-[15.5px] font-medium text-navy transition-colors hover:border-navy">
+                Accessoires
+              </Link>
+              {promos.length > 0 && (
+                <Link href="/promotions" className="inline-flex h-12 items-center rounded-full border border-ochre/40 bg-ochre-soft px-7 text-[15.5px] font-medium text-ochre-ink transition-colors hover:border-ochre">
+                  Promotions
+                </Link>
+              )}
+            </nav>
+            <div className="reveal-word mt-6" style={{ animationDelay: `${taglineEnd + 250}ms` }}>
+              <SocialLinks settings={settings} tone="dark" className="justify-center lg:justify-start" />
+            </div>
           </div>
         </div>
       </section>

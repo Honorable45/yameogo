@@ -154,14 +154,13 @@ export function SiteImagesPanel({ settings, onSaved }: { settings: Settings; onS
     }
   };
   const items: { kind: 'logo' | 'hero' | 'phones' | 'shop'; label: string; url: string | null; hint: string; altKey?: string }[] = [
-    { kind: 'hero', label: 'Photo d’accueil', url: settings.heroImageUrl as string | null, hint: 'Image plein écran de l’accueil.', altKey: 'heroImageAlt' },
     { kind: 'phones', label: 'Photo « Smartphones »', url: settings.phonesImageUrl as string | null, hint: 'Bandeau du catalogue des smartphones.', altKey: 'phonesImageAlt' },
     { kind: 'shop', label: 'Photo de la boutique', url: settings.shopImageUrl as string | null, hint: 'Page « Contact ».', altKey: 'shopImageAlt' },
     { kind: 'logo', label: 'Logo', url: settings.logoUrl as string | null, hint: 'Facultatif : sans logo, le nom s’affiche en typographie.' },
   ];
   return (
     <Panel title="Photos du site">
-      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((it) => (
           <li key={it.kind}>
             <p className="text-[13.5px] font-medium">{it.label}</p>

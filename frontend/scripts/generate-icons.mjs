@@ -12,9 +12,9 @@ const svg = (size, { scale = 0.56 } = {}) => {
   const y = size * scale;
   const dot = size * 0.045;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="#15171c"/>
+  <rect width="${size}" height="${size}" fill="#13285a"/>
   <text x="${size / 2 - dot}" y="${size / 2 + y * 0.36}" text-anchor="middle" font-family="'IBM Plex Sans', 'DejaVu Sans', Arial, sans-serif" font-size="${y}" font-weight="600" fill="#f5f3ee">Y</text>
-  <circle cx="${size / 2 + y * 0.36}" cy="${size / 2 + y * 0.36 - dot}" r="${dot}" fill="#1f4fd8"/>
+  <circle cx="${size / 2 + y * 0.36}" cy="${size / 2 + y * 0.36 - dot}" r="${dot}" fill="#f26a1b"/>
 </svg>`;
 };
 
