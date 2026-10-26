@@ -43,8 +43,8 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      shopName: 'YAMEOGO',
-      tagline: 'Smartphones et accessoires',
+      shopName: 'Yameogo Smart Tech',
+      tagline: 'La qualité au meilleur prix',
       // Photos libres de droits (licence Unsplash) — remplaçables depuis Paramètres › Photos du site.
       heroImageUrl: 'https://images.unsplash.com/photo-1691449808001-bb8c157f0094?w=1600&q=80&fm=webp',
       heroImageAlt: 'Smartphone et écouteurs sans fil posés sur une table',

@@ -11,7 +11,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-ink focus:px-3 focus:py-2 focus:text-white">
         Aller au contenu
       </a>
-      <SiteHeader logoUrl={settings?.logoUrl ?? null} shopName={settings?.shopName ?? 'YAMEOGO'} whatsapp={settings?.whatsapp ?? null} />
+      <SiteHeader logoUrl={settings?.logoUrl ?? null} shopName={settings?.shopName ?? 'Yameogo Smart Tech'} whatsapp={settings?.whatsapp ?? null} />
       {/* L'en-tête flotte au-dessus du contenu : chaque page réserve sa hauteur, sauf l'accueil (image plein cadre). */}
       <main id="contenu">{children}</main>
       <SiteFooter settings={settings} />

@@ -45,9 +45,10 @@ export default function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12">
         <a href="/" className="flex items-baseline gap-2">
-          <span className="flex items-baseline text-[16px] font-semibold uppercase leading-none tracking-[0.24em] text-ink">
-            YAMEOGO
-            <span className="ml-0.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+          <span className="flex items-center uppercase leading-none text-ink">
+            <span className="text-[16px] font-semibold tracking-[0.2em]">Yameogo</span>
+            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+            <span className="text-[10px] font-medium tracking-[0.3em] text-ink-2">Smart Tech</span>
           </span>
         </a>
         <div className="mx-auto w-full max-w-sm py-12">

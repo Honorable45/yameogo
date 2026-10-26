@@ -146,8 +146,9 @@ Dans le même écran : téléphone, e-mail, adresse, ville, position GPS (carte 
 | `DATA_ENCRYPTION_KEY` | oui | 32 octets en base64. Chiffre les codes d’avis conservés. **Ne jamais la changer** |
 | `WEB_ORIGIN` | oui en prod | URL du site (CORS, liens des codes d’avis) |
 | `ADMIN_ORIGIN` | oui en prod | URL de l’administration (CORS) |
-| `API_PUBLIC_URL` | non | URL publique de l’API (photos sans Cloudinary) ; sur Render, déduite de `RENDER_EXTERNAL_URL` |
-| `CLOUDINARY_URL` | oui en prod | Photos sur Cloudinary (`cloudinary://CLE:SECRET@NOM_DU_CLOUD`). Absente : photos sur le disque (développement) |
+| `API_PUBLIC_URL` | non | URL publique de l’API (photos sans R2) ; sur Render, déduite de `RENDER_EXTERNAL_URL` |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | oui en prod | Photos sur Cloudflare R2 (voir « Photos sur Cloudflare R2 »). `R2_BUCKET` absent : photos sur le disque (développement) |
+| `R2_PRIVATE_BUCKET` | recommandé | Bucket sans accès public pour les justificatifs de dépenses |
 | `PORT` | non | 4100 par défaut (Render fournit le sien) |
 | `COOKIE_SECURE` / `TRUST_PROXY` / `NODE_ENV` | prod | `true` / `2` / `production` (déjà dans `render.yaml`) |
 | `SEED_MANAGER_EMAIL`, `SEED_MANAGER_NAME`, `SEED_MANAGER_PASSWORD` | au premier `db:seed` | Premier compte Responsable |
@@ -183,7 +184,7 @@ Scénarios vérifiés dans Chrome (bureau et 390 px) : choix couleur/RAM/stockag
 
 Trois services : l’API sur Render, le site et l’administration sur deux projets Vercel. **PostgreSQL 15 ou plus** est requis (index « NULLS NOT DISTINCT »).
 
-1. **Render** (« New → Blueprint » depuis `render.yaml`) : renseigner `WEB_ORIGIN`, `ADMIN_ORIGIN`, `DATA_ENCRYPTION_KEY`, `CLOUDINARY_URL`. Le démarrage applique les migrations. Puis, une fois : `SEED_MANAGER_EMAIL=… SEED_MANAGER_PASSWORD=… pnpm --filter @yameogo/backend db:seed` (ou depuis un poste, avec `DATABASE_URL` de production).
+1. **Render** (« New → Blueprint » depuis `render.yaml`) : renseigner `WEB_ORIGIN`, `ADMIN_ORIGIN`, `DATA_ENCRYPTION_KEY` et les variables `R2_…`. Le démarrage applique les migrations. Puis, une fois : `SEED_MANAGER_EMAIL=… SEED_MANAGER_PASSWORD=… pnpm --filter @yameogo/backend db:seed` (ou depuis un poste, avec `DATABASE_URL` de production).
 2. **Vercel — site** : Root Directory `frontend`, variable `API_URL=https://<api>.onrender.com`.
 3. **Vercel — administration** : Root Directory `admin`, même `API_URL`.
 4. Dans l’administration : renseigner le **numéro WhatsApp** et les coordonnées, puis créer les produits.
@@ -191,6 +192,14 @@ Trois services : l’API sur Render, le site et l’administration sur deux proj
 Le build Vercel échoue volontairement si `API_URL` est absente ou interne (jamais de lien `localhost` en production).
 
 ---
+
+### Photos sur Cloudflare R2
+
+1. Cloudflare › R2 : créer un bucket **`yameogo-images`**, puis *Paramètres › Accès public* : activer l’adresse **r2.dev** (ou relier un domaine personnalisé, recommandé en production). Cette adresse est `R2_PUBLIC_URL`.
+2. Créer un second bucket **`yameogo-prive`**, sans accès public : `R2_PRIVATE_BUCKET` (justificatifs de dépenses).
+3. R2 › *Gérer les jetons API* : créer un jeton « Object Read & Write » limité à ces deux buckets → `R2_ACCESS_KEY_ID` et `R2_SECRET_ACCESS_KEY`. L’identifiant de compte (32 caractères) est `R2_ACCOUNT_ID`.
+
+Chaque photo est vérifiée, nettoyée de ses métadonnées et enregistrée en WebP en trois largeurs (480, 960, 1600 px) : le site sert la taille adaptée à l’écran. Les fichiers portent un nom aléatoire et sont mis en cache un an.
 
 ## Règles de gestion conservées
 

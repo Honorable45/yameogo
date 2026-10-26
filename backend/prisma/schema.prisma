@@ -1,4 +1,4 @@
-// YAMEOGO — modèle de données
+// Yameogo Smart Tech — modèle de données
 //
 // Conventions :
 // - Montants en francs CFA (XOF), stockés en entiers (le XOF n'a pas de subdivision).
@@ -93,7 +93,7 @@ model Counter {
 
 model BusinessSettings {
   id                    Int      @id @default(1)
-  shopName              String   @default("YAMEOGO")
+  shopName              String   @default("Yameogo Smart Tech")
   tagline               String?
   logoUrl               String?
   heroImageUrl          String?

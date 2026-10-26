@@ -46,7 +46,7 @@ export function SiteFooter({ settings: s }: { settings: PublicSettings | null })
       </div>
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-2 py-5 text-[12.5px] text-paper/50 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} {s?.shopName ?? 'YAMEOGO'}</p>
+          <p>© {new Date().getFullYear()} {s?.shopName ?? 'Yameogo Smart Tech'}</p>
           <p className="flex gap-5">
             <Link href="/mentions-legales" className="hover:text-paper">Mentions légales</Link>
             <Link href="/confidentialite" className="hover:text-paper">Confidentialité</Link>

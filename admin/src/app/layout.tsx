@@ -34,7 +34,7 @@ const mono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Gestion · YAMEOGO', template: '%s · Gestion YAMEOGO' },
+  title: { default: 'Gestion · Yameogo Smart Tech', template: '%s · Gestion Yameogo Smart Tech' },
   robots: { index: false, follow: false },
   icons: { icon: '/icon.svg' },
 };

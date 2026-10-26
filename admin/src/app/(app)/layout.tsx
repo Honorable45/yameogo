@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [error, router]);
 
   useEffect(() => {
-    document.title = 'Gestion · YAMEOGO';
+    document.title = 'Gestion · Yameogo Smart Tech';
   }, []);
 
   if (!data) return <LoadingBlock className="min-h-dvh" label="Ouverture de la session…" />;

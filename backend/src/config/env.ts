@@ -14,9 +14,9 @@ export interface AppConfig {
   sessionTtlHours: number;
   cookieSecure: boolean;
   storage: {
-    driver: 'local' | 'cloudinary';
+    driver: 'local' | 'r2';
     localDir: string;
-    cloudinary: { cloudName: string; apiKey: string; apiSecret: string } | null;
+    r2: { endpoint: string; bucket: string; privateBucket: string | null; accessKeyId: string; secretAccessKey: string; publicUrl: string } | null;
   };
   paygateApiKey?: string;
 }
@@ -44,19 +44,24 @@ export function loadConfig(): AppConfig {
     throw new Error('DATA_ENCRYPTION_KEY doit représenter exactement 32 octets encodés en base64.');
   }
 
-  // Images sur Cloudinary dès que CLOUDINARY_URL est renseignée (cloudinary://CLE:SECRET@NOM_DU_CLOUD), sinon sur disque.
-  // Tolère le copier-coller de la ligne entière affichée par Cloudinary (« CLOUDINARY_URL=cloudinary://… ») et les guillemets.
-  const cloudinaryUrl = process.env.CLOUDINARY_URL?.trim().replace(/^CLOUDINARY_URL=/, '').replace(/^["']|["']$/g, '');
-  let cloudinary: AppConfig['storage']['cloudinary'] = null;
-  // Le SDK Cloudinary relit cette variable à son chargement : on n'y laisse que la valeur nettoyée.
-  if (cloudinaryUrl) process.env.CLOUDINARY_URL = cloudinaryUrl;
-  else delete process.env.CLOUDINARY_URL;
-  if (cloudinaryUrl) {
-    const m = cloudinaryUrl.match(/^cloudinary:\/\/([^:@\s]+):([^@\s]+)@([^/\s?]+)$/);
-    if (!m) throw new Error('CLOUDINARY_URL doit avoir la forme cloudinary://CLE_API:SECRET_API@NOM_DU_CLOUD.');
-    cloudinary = { apiKey: m[1], apiSecret: m[2], cloudName: m[3] };
+  // Images sur Cloudflare R2 dès que R2_BUCKET est renseigné ; sinon sur le disque (développement).
+  const r2Bucket = process.env.R2_BUCKET?.trim();
+  let r2: AppConfig['storage']['r2'] = null;
+  if (r2Bucket) {
+    const accountId = required('R2_ACCOUNT_ID');
+    if (!/^[a-f0-9]{32}$/i.test(accountId)) throw new Error('R2_ACCOUNT_ID doit être l’identifiant de compte Cloudflare (32 caractères hexadécimaux).');
+    const publicUrl = required('R2_PUBLIC_URL').replace(/\/$/, '');
+    if (!/^https:\/\//.test(publicUrl)) throw new Error('R2_PUBLIC_URL doit être l’adresse publique du bucket (https://pub-….r2.dev ou votre domaine).');
+    r2 = {
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      bucket: r2Bucket,
+      privateBucket: process.env.R2_PRIVATE_BUCKET?.trim() || null,
+      accessKeyId: required('R2_ACCESS_KEY_ID'),
+      secretAccessKey: required('R2_SECRET_ACCESS_KEY'),
+      publicUrl,
+    };
   }
-  const driver = cloudinary ? 'cloudinary' : 'local';
+  const driver = r2 ? 'r2' : 'local';
 
   const port = Number(process.env.PORT ?? 4100);
   const production = process.env.NODE_ENV === 'production';
@@ -77,7 +82,7 @@ export function loadConfig(): AppConfig {
     storage: {
       driver,
       localDir: process.env.LOCAL_UPLOAD_DIR ?? './uploads',
-      cloudinary,
+      r2,
     },
     paygateApiKey: process.env.PAYGATE_API_KEY?.trim() || undefined,
   };

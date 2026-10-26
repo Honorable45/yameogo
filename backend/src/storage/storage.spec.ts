@@ -2,11 +2,19 @@ import { loadConfig, resetConfigCache } from '../config/env';
 import { CryptoService } from '../common/crypto.service';
 import { StorageService } from './storage.service';
 
-describe('Stockage Cloudinary', () => {
-  const previous = process.env.CLOUDINARY_URL;
+const R2 = {
+  R2_ACCOUNT_ID: '0123456789abcdef0123456789abcdef',
+  R2_ACCESS_KEY_ID: 'cle-test',
+  R2_SECRET_ACCESS_KEY: 'secret-test',
+  R2_BUCKET: 'yameogo-images',
+  R2_PUBLIC_URL: 'https://images.yameogo.test/',
+};
+
+describe('Stockage Cloudflare R2', () => {
+  const saved = { ...process.env };
   afterEach(() => {
-    if (previous === undefined) delete process.env.CLOUDINARY_URL;
-    else process.env.CLOUDINARY_URL = previous;
+    for (const k of [...Object.keys(R2), 'R2_PRIVATE_BUCKET']) delete process.env[k];
+    Object.assign(process.env, saved);
     resetConfigCache();
   });
 
@@ -15,38 +23,25 @@ describe('Stockage Cloudinary', () => {
     return new StorageService(new CryptoService());
   }
 
-  it('reste en stockage local sans CLOUDINARY_URL', () => {
-    delete process.env.CLOUDINARY_URL;
+  it('reste en stockage local sans R2_BUCKET', () => {
     const storage = service();
     expect(loadConfig().storage.driver).toBe('local');
     expect(storage.publicUrl('products/2026-10/abc')).toMatch(/\/uploads\/products\/2026-10\/abc-1600\.webp$/);
   });
 
-  it('refuse une CLOUDINARY_URL mal formée', () => {
-    process.env.CLOUDINARY_URL = 'https://api.cloudinary.com/demo';
+  it('exige les autres variables R2 dès qu’un bucket est indiqué', () => {
+    process.env.R2_BUCKET = 'yameogo-images';
     resetConfigCache();
-    expect(() => loadConfig()).toThrow('CLOUDINARY_URL');
-  });
-
-  it('accepte la ligne entière copiée depuis Cloudinary', () => {
-    process.env.CLOUDINARY_URL = 'CLOUDINARY_URL=cloudinary://123456:secret-test@yameogo-demo';
+    expect(() => loadConfig()).toThrow('R2_ACCOUNT_ID');
+    Object.assign(process.env, R2, { R2_PUBLIC_URL: 'http://pas-https.test' });
     resetConfigCache();
-    expect(loadConfig().storage.cloudinary).toEqual({ apiKey: '123456', apiSecret: 'secret-test', cloudName: 'yameogo-demo' });
-    expect(process.env.CLOUDINARY_URL).toBe('cloudinary://123456:secret-test@yameogo-demo');
+    expect(() => loadConfig()).toThrow('R2_PUBLIC_URL');
   });
 
-  it('sert les images publiques depuis le dossier yameogo du compte', () => {
-    process.env.CLOUDINARY_URL = 'cloudinary://123456:secret-test@yameogo-demo';
+  it('sert les images depuis l’adresse publique du bucket, en plusieurs largeurs', () => {
+    Object.assign(process.env, R2);
     const storage = service();
-    expect(loadConfig().storage.driver).toBe('cloudinary');
-    expect(storage.publicUrl('phones/2026-10/abc')).toBe('https://res.cloudinary.com/yameogo-demo/image/upload/yameogo/phones/2026-10/abc.webp');
-  });
-
-  it('lit les fichiers privés par une URL signée de type authenticated', () => {
-    process.env.CLOUDINARY_URL = 'cloudinary://123456:secret-test@yameogo-demo';
-    const storage = service();
-    const url = (storage as unknown as { privateCloudUrl: (k: string) => string }).privateCloudUrl.bind(storage);
-    expect(url('private/receipts/2026-10/tok.pdf')).toMatch(/^https:\/\/res\.cloudinary\.com\/yameogo-demo\/raw\/authenticated\/s--[\w-]{8}--\/.*yameogo\/private\/receipts\/2026-10\/tok\.pdf$/);
-    expect(url('private/requests/2026-10/tok.webp')).toMatch(/^https:\/\/res\.cloudinary\.com\/yameogo-demo\/image\/authenticated\/s--[\w-]{8}--\/.*yameogo\/private\/requests\/2026-10\/tok\.webp$/);
+    expect(loadConfig().storage.r2).toMatchObject({ endpoint: 'https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com', bucket: 'yameogo-images', privateBucket: null });
+    expect(storage.publicUrl('products/2026-10/abc')).toBe('https://images.yameogo.test/products/2026-10/abc-1600.webp');
   });
 });

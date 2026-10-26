@@ -2,16 +2,15 @@
  * Service worker de YAMEOGO (application installable).
  * - Pages : réseau d'abord (prix et stock toujours à jour) ; sans réseau, dernière version vue, sinon /hors-ligne.html (page autonome, sans script).
  * - Fichiers du site (/_next/static, versionnés) : cache d'abord.
- * - Photos (Cloudinary, Unsplash, API) : cache puis mise à jour en arrière-plan, 80 photos au plus.
+ * - Photos (Cloudflare R2, Unsplash, API) : cache puis mise à jour en arrière-plan, 80 photos au plus.
  * - /api (sessions, avis, paiements) : jamais mis en cache.
  */
-const VERSION = 'ymg-v1';
+const VERSION = 'ymg-v2';
 const PAGES = `pages-${VERSION}`;
 const STATIC = `static-${VERSION}`;
 const IMAGES = `images-${VERSION}`;
 const OFFLINE = '/hors-ligne.html';
 const PRECACHE = [OFFLINE, '/icon-192.png', '/icon-512.png'];
-const IMAGE_HOSTS = ['res.cloudinary.com', 'images.unsplash.com'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(PAGES).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -78,5 +77,6 @@ self.addEventListener('fetch', (event) => {
   if (sameOrigin && url.pathname.startsWith('/api/')) return;
   if (request.mode === 'navigate') return event.respondWith(networkFirst(request));
   if (sameOrigin && url.pathname.startsWith('/_next/static/')) return event.respondWith(cacheFirst(request));
-  if (request.destination === 'image' && (sameOrigin || IMAGE_HOSTS.includes(url.hostname))) return event.respondWith(staleWhileRevalidate(request));
+  // Photos : quel que soit leur domaine (R2, domaine personnalisé, Unsplash).
+  if (request.destination === 'image') return event.respondWith(staleWhileRevalidate(request));
 });

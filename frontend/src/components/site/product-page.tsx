@@ -51,7 +51,7 @@ export async function ProductPage({ slug, kind, configuration }: { slug: string;
     <div className="container-page pt-40 lg:pt-32">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <BackButton fallback={listing} className="mb-6" />
-      <ProductView product={p} whatsapp={settings?.whatsapp ?? null} shopName={settings?.shopName ?? 'YAMEOGO'} initialVariantId={configuration} />
+      <ProductView product={p} whatsapp={settings?.whatsapp ?? null} shopName={settings?.shopName ?? 'Yameogo Smart Tech'} initialVariantId={configuration} />
     </div>
   );
 }

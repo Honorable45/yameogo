@@ -31,7 +31,7 @@ function FacebookIcon({ className }: { className?: string }) {
 
 /** Liens vers les réseaux de la boutique ; un réseau n'apparaît que si son adresse est renseignée. */
 export function SocialLinks({ settings, tone = 'light', className, size = 'md', withoutWhatsApp }: { settings: PublicSettings | null; tone?: 'light' | 'dark'; className?: string; size?: 'md' | 'lg'; withoutWhatsApp?: boolean }) {
-  const whatsapp = waLink(settings?.whatsapp, `Bonjour ${settings?.shopName ?? 'YAMEOGO'},`);
+  const whatsapp = waLink(settings?.whatsapp, `Bonjour ${settings?.shopName ?? 'Yameogo Smart Tech'},`);
   const links = [
     !withoutWhatsApp && whatsapp && { label: 'WhatsApp', href: whatsapp, Icon: WhatsAppIcon },
     settings?.social?.tiktok && { label: 'TikTok', href: settings.social.tiktok, Icon: TikTokIcon },

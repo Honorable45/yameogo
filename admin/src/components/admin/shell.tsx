@@ -49,9 +49,10 @@ function Sidebar({ queue, onNavigate }: { queue: Queue | undefined; onNavigate?:
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <Link href="/" onClick={onNavigate} className="flex items-baseline gap-2">
-          <span className="flex items-baseline text-[15px] font-semibold uppercase leading-none tracking-[0.24em] text-ink">
-            YAMEOGO
-            <span className="ml-0.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+          <span className="flex items-center uppercase leading-none text-ink">
+            <span className="text-[15px] font-semibold tracking-[0.2em]">Yameogo</span>
+            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-accent" aria-hidden="true" />
+            <span className="text-[10px] font-medium tracking-[0.3em] text-ink-2">Smart Tech</span>
           </span>
         </Link>
       </div>

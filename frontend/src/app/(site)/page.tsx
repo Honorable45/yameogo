@@ -25,6 +25,32 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
   );
 }
 
+/**
+ * Nom de la boutique : premier mot lettre par lettre, puis la suite qui se resserre (« SMART TECH »).
+ * Renvoie aussi l'instant où l'animation est terminée, pour enchaîner l'accroche.
+ */
+function HeroName({ name }: { name: string }) {
+  const [first, ...rest] = name.trim().split(/\s+/);
+  const letters = [...first];
+  const restStart = 300 + letters.length * 85;
+  return (
+    <h1 aria-label={name}>
+      <span aria-hidden="true" className="block text-[58px] font-semibold uppercase leading-[0.95] tracking-[0.1em] sm:text-[108px] lg:text-[136px]">
+        {letters.map((l, i) => (
+          <span key={i} className="reveal-letter" style={{ animationDelay: `${300 + i * 85}ms` }}>
+            {l}
+          </span>
+        ))}
+      </span>
+      {rest.length > 0 && (
+        <span aria-hidden="true" className="reveal-tracking mt-4 block pl-[0.46em] text-[15px] font-medium uppercase text-white/85 sm:mt-5 sm:text-[22px] lg:text-[26px]" style={{ animationDelay: `${restStart}ms` }}>
+          {rest.join(' ')}
+        </span>
+      )}
+    </h1>
+  );
+}
+
 const list = (query: string) => serverGet<Paginated<CatalogCard>>(`/shop/catalog?${query}`, 60).then((r) => r?.items ?? []);
 
 export default async function HomePage() {
@@ -36,8 +62,12 @@ export default async function HomePage() {
     serverGet<CatalogFacets>('/shop/catalog-facets?kind=PHONE', 300),
     serverGet<ReviewsPage>('/reviews/public?pageSize=3', 300),
   ]);
-  const tagline = settings?.tagline || 'Smartphones et accessoires';
-  const taglineEnd = 500 + tagline.split(' ').length * 110;
+  const shopName = settings?.shopName || 'Yameogo Smart Tech';
+  const tagline = settings?.tagline || 'La qualité au meilleur prix';
+  // Enchaînement : nom (lettres puis suite), trait, accroche mot par mot, puis les boutons.
+  const nameEnd = 300 + [...shopName.split(' ')[0]].length * 85 + 700;
+  const taglineStart = nameEnd + 500;
+  const taglineEnd = taglineStart + tagline.split(' ').length * 140 + 300;
 
   return (
     <>
@@ -46,12 +76,13 @@ export default async function HomePage() {
         {settings?.heroImageUrl && <Image src={settings.heroImageUrl} alt={settings.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />}
         {/* Voile uniforme : lisibilité du texte sur n'importe quelle photo. */}
         <span className="absolute inset-0 bg-navy/60" aria-hidden="true" />
+        {/* Halo sombre au centre : contraste du nom quelle que soit la photo. */}
+        <span className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(21_23_28/0.45),transparent_65%)]" aria-hidden="true" />
         <div className="relative px-6 pb-16 pt-40 text-center lg:pt-28">
-          <h1 className="text-[52px] font-semibold uppercase leading-none tracking-[0.14em] sm:text-[96px] lg:text-[120px]">
-            <Reveal text={settings?.shopName ?? 'YAMEOGO'} start={100} step={180} />
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl font-serif text-[22px] italic leading-snug text-white/90 sm:text-[30px]">
-            <Reveal text={tagline} start={500} />
+          <HeroName name={shopName} />
+          <span aria-hidden="true" className="reveal-line mx-auto mt-8 block h-px w-28 bg-gradient-to-r from-transparent via-white/80 to-transparent sm:mt-10 sm:w-40" style={{ animationDelay: `${nameEnd}ms` }} />
+          <p className="mx-auto mt-6 max-w-2xl font-serif text-[22px] italic leading-snug text-white/90 sm:mt-8 sm:text-[30px]">
+            <Reveal text={tagline} start={taglineStart} step={140} />
           </p>
           <nav aria-label="Rubriques" className="reveal-word mt-12 flex flex-wrap justify-center gap-3" style={{ animationDelay: `${taglineEnd}ms` }}>
             <Link href="/telephones" className="inline-flex h-12 items-center rounded-full bg-white px-7 text-[15.5px] font-medium text-navy transition-transform hover:-translate-y-0.5">

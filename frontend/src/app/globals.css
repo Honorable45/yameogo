@@ -172,6 +172,34 @@
     0 10px 26px -12px rgb(8 18 40 / 0.6);
 }
 
+/* Accueil : lettres qui montent et passent du flou au net ; sous-titre qui se resserre ; trait qui se déploie. */
+@keyframes letter-in {
+  from { opacity: 0; transform: translateY(0.32em) scale(0.97); filter: blur(10px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes tracking-in {
+  from { opacity: 0; letter-spacing: 1.1em; filter: blur(6px); }
+  to { opacity: 1; letter-spacing: 0.46em; filter: blur(0); }
+}
+@keyframes line-grow {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+@utility reveal-letter {
+  display: inline-block;
+  opacity: 0;
+  animation: letter-in 900ms var(--ease-out) forwards;
+}
+@utility reveal-tracking {
+  opacity: 0;
+  letter-spacing: 0.46em;
+  animation: tracking-in 1500ms var(--ease-out) forwards;
+}
+@utility reveal-line {
+  opacity: 0;
+  animation: line-grow 1000ms var(--ease-out) forwards;
+}
+
 /* Apparition progressive, mot par mot (délai fixé en ligne). */
 @utility reveal-word {
   display: inline-block;

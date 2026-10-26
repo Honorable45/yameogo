@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 /** Contact et informations commerciales : seules les informations renseignées dans Paramètres apparaissent. */
 export default async function ContactPage() {
   const s = await serverGet<PublicSettings>('/settings/public', 60);
-  const shopName = s?.shopName ?? 'YAMEOGO';
+  const shopName = s?.shopName ?? 'Yameogo Smart Tech';
   const address = [s?.addressLine, s?.city, s?.country].filter(Boolean).join(', ');
   const opening = s?.openingHours.length ? todayOpening(s.openingHours) : null;
   const directions = directionsUrl(s);

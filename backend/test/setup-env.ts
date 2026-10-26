@@ -5,5 +5,5 @@ process.env.BUSINESS_TIMEZONE ??= 'Africa/Lome';
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgresql://yameogo@localhost:5436/yameogo_test?schema=public';
 process.env.NODE_ENV = 'test';
 process.env.LOCAL_UPLOAD_DIR ??= require('node:os').tmpdir() + '/yameogo-test-uploads';
-// Jamais de vrai compte Cloudinary pendant les tests : photos sur disque temporaire.
-delete process.env.CLOUDINARY_URL;
+// Jamais de vrai bucket R2 pendant les tests : photos sur disque temporaire.
+delete process.env.R2_BUCKET;

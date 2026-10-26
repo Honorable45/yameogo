@@ -21,6 +21,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3",
     "@date-fns/tz": "1",
     "@nestjs/common": "11.1.29",
     "@nestjs/core": "11.1.29",
@@ -30,7 +31,6 @@
     "@prisma/client": "6.19.3",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.4",
-    "cloudinary": "2",
     "cookie-parser": "1.4.7",
     "date-fns": "4",
     "helmet": "8",

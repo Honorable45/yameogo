@@ -37,8 +37,21 @@ services:
       # Les navigateurs passent par le relais /api de Vercel, puis par le proxy Render.
       - key: TRUST_PROXY
         value: "2"
-      # Photos sur Cloudinary (cloudinary://CLE_API:SECRET_API@NOM_DU_CLOUD) : le disque Render est effacé à chaque déploiement.
-      - key: CLOUDINARY_URL
+      # Photos sur Cloudflare R2 (le disque Render est effacé à chaque déploiement).
+      # Tableau de bord Cloudflare › R2 : identifiant de compte, jeton API (Object Read & Write), buckets.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      # Adresse publique du bucket des photos : https://pub-….r2.dev ou votre domaine (sans / final).
+      - key: R2_PUBLIC_URL
+        sync: false
+      # Bucket privé pour les justificatifs de dépenses (recommandé).
+      - key: R2_PRIVATE_BUCKET
         sync: false
       # Facultatif : laisser vide désactive le paiement mobile en ligne.
       - key: PAYGATE_API_KEY
