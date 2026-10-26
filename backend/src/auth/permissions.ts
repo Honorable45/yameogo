@@ -12,16 +12,6 @@ export const PERMISSIONS = [
   'stock.adjust',
   'purchases.manage',
   'suppliers.manage',
-  'usedPhones.read',
-  'usedPhones.write',
-  'usedPhones.imei',
-  'repairs.read',
-  'repairs.write',
-  'repairs.imei',
-  'repairs.payments',
-  'repairs.handover',
-  'repairPricing.manage',
-  'requests.manage',
   'orders.read',
   'orders.manage',
   'orders.returns',
@@ -39,28 +29,9 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-const TECHNICIAN: Permission[] = [
-  'catalog.read',
-  'stock.read',
-  'usedPhones.read',
-  'repairs.read',
-  'repairs.write',
-  'repairs.imei',
-  'repairs.payments',
-  'repairs.handover',
-  'requests.manage',
-  'customers.read',
-  'customers.write',
-  'reviews.tokens',
-];
-
 const SELLER: Permission[] = [
   'catalog.read',
   'stock.read',
-  'usedPhones.read',
-  'repairs.read',
-  'repairs.payments',
-  'repairs.handover',
   'orders.read',
   'orders.manage',
   'customers.read',
@@ -70,7 +41,6 @@ const SELLER: Permission[] = [
 
 export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
   MANAGER: new Set(PERMISSIONS),
-  TECHNICIAN: new Set(TECHNICIAN),
   SELLER: new Set(SELLER),
 };
 
@@ -80,6 +50,5 @@ export function can(role: Role, permission: Permission): boolean {
 
 export const ROLE_LABELS: Record<Role, string> = {
   MANAGER: 'Responsable',
-  TECHNICIAN: 'Réparateur',
   SELLER: 'Vendeur',
 };

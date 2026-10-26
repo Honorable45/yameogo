@@ -3,11 +3,9 @@ import { ReviewService, ReviewStatus } from '@prisma/client';
 import { AuditService } from '../common/audit.service';
 import { CryptoService } from '../common/crypto.service';
 import { PrismaService, Tx } from '../prisma/prisma.service';
-import { DONE_STATUSES } from '../repairs/repair-rules';
 
 export interface ReviewInput {
   rating: number;
-  ratingRepair?: number;
   ratingWelcome?: number;
   ratingValue?: number;
   comment?: string;
@@ -15,11 +13,10 @@ export interface ReviewInput {
   code: string;
 }
 
-/** Ce que concerne un code d'avis : un dossier de réparation ou une vente. */
-export type ReviewTarget = { kind: 'repair'; id: string } | { kind: 'order'; id: string };
+/** Vente concernée par un code d'avis. */
+export type ReviewTarget = { kind: 'order'; id: string };
 
 export const SERVICE_LABELS: Record<ReviewService, string> = {
-  REPAIR: 'Réparation',
   ACCESSORY_PURCHASE: "Achat d'accessoires",
   PHONE_PURCHASE: "Achat d'un téléphone",
   OTHER: 'Autre',
@@ -31,10 +28,10 @@ const REVIEW_CODE_DAYS = 180;
 
 /**
  * Avis clients.
- * - Un avis n'est possible qu'avec un code, généré automatiquement pour chaque réparation et chaque vente
- *   (affiché dans l'administration, remis au client). Un code ne sert qu'une fois ; un dossier ou une vente
- *   ne reçoit qu'un avis.
- * - Le code n'est utilisable qu'une fois la réparation terminée ou la vente conclue.
+ * - Un avis n'est possible qu'avec un code, généré automatiquement pour chaque vente
+ *   (affiché dans l'administration, imprimé sur le ticket, remis au client). Un code ne sert qu'une fois ;
+ *   une vente ne reçoit qu'un avis.
+ * - Le code n'est utilisable qu'une fois la vente conclue (commande remise au client).
  * - L'avis est publié immédiatement ; la boutique peut ensuite le masquer s'il est abusif.
  * - Le contenu d'un avis n'est jamais modifié.
  */
@@ -69,7 +66,7 @@ export class ReviewsService {
       const state = await this.lockTarget(tx, target);
       if (state.review) throw new ConflictException('Un avis a déjà été donné : aucun nouveau code n’est nécessaire.');
       const created = await this.issue(tx, target, userId);
-      await this.audit.log({ userId, action: 'review.code.regenerate', entity: target.kind === 'repair' ? 'RepairJob' : 'Order', entityId: target.id, summary: `Nouveau code d'avis pour ${state.label}` }, tx);
+      await this.audit.log({ userId, action: 'review.code.regenerate', entity: 'Order', entityId: target.id, summary: `Nouveau code d'avis pour ${state.label}` }, tx);
       return this.codeInfo(state, created.code, created.expiresAt);
     });
   }
@@ -96,18 +93,12 @@ export class ReviewsService {
   }
 
   private targetWhere(target: ReviewTarget) {
-    return target.kind === 'repair' ? { repairJobId: target.id } : { orderId: target.id };
+    return { orderId: target.id };
   }
 
   /** Verrouille le dossier ou la vente (codes créés une seule fois même en cas d'appels simultanés). */
   private async lockTarget(tx: Tx, target: ReviewTarget): Promise<TargetState> {
     const review = { select: { id: true, rating: true, createdAt: true, status: true } } as const;
-    if (target.kind === 'repair') {
-      const [row] = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "RepairJob" WHERE "id" = ${target.id} FOR UPDATE`;
-      if (!row) throw new NotFoundException('Réparation introuvable.');
-      const job = await tx.repairJob.findUniqueOrThrow({ where: { id: target.id }, select: { number: true, status: true, review } });
-      return { label: `la réparation ${job.number}`, done: DONE_STATUSES.includes(job.status), waitingFor: 'la fin de la réparation', review: job.review };
-    }
     const [row] = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "Order" WHERE "id" = ${target.id} FOR UPDATE`;
     if (!row) throw new NotFoundException('Vente introuvable.');
     const order = await tx.order.findUniqueOrThrow({ where: { id: target.id }, select: { number: true, status: true, review } });
@@ -123,21 +114,15 @@ export class ReviewsService {
     const token = await this.prisma.reviewVerificationToken.findUnique({
       where: { codeHash: this.crypto.hmac(normalized, 'review') },
       include: {
-        repairJob: { select: { id: true, status: true, brandName: true, modelName: true } },
-        order: { select: { id: true, status: true, items: { select: { label: true, usedPhoneId: true } } } },
+        order: { select: { id: true, status: true, items: { select: { label: true, product: { select: { kind: true } } } } } },
       },
     });
     if (!token || token.revokedAt || token.usedAt || token.expiresAt < new Date()) throw new BadRequestException(CODE_ERROR);
-    if (token.repairJob && !DONE_STATUSES.includes(token.repairJob.status)) {
-      throw new BadRequestException('Votre réparation n’est pas encore terminée : vous pourrez donner votre avis dès qu’elle le sera.');
-    }
-    if (token.order && token.order.status !== 'COMPLETED') {
+    if (token.order.status !== 'COMPLETED') {
       throw new BadRequestException('Votre commande n’est pas encore remise : vous pourrez donner votre avis dès réception.');
     }
-    const serviceType: ReviewService = token.repairJob ? 'REPAIR' : token.order!.items.some((i) => i.usedPhoneId) ? 'PHONE_PURCHASE' : 'ACCESSORY_PURCHASE';
-    const subject = token.repairJob
-      ? `Réparation de votre ${token.repairJob.brandName} ${token.repairJob.modelName}`
-      : `Achat : ${token.order!.items.map((i) => i.label).slice(0, 2).join(', ')}${token.order!.items.length > 2 ? '…' : ''}`;
+    const serviceType: ReviewService = token.order.items.some((i) => i.product.kind === 'PHONE') ? 'PHONE_PURCHASE' : 'ACCESSORY_PURCHASE';
+    const subject = `Achat : ${token.order.items.map((i) => i.label).slice(0, 2).join(', ')}${token.order.items.length > 2 ? '…' : ''}`;
     return { token, serviceType, subject };
   }
 
@@ -156,13 +141,12 @@ export class ReviewsService {
         data: { usedAt: new Date() },
       });
       if (!count) throw new BadRequestException(CODE_ERROR);
-      const target = token.repairJobId ? { repairJobId: token.repairJobId } : { orderId: token.orderId! };
+      const target = { orderId: token.orderId };
       if (await tx.review.findFirst({ where: target })) throw new ConflictException('Un avis a déjà été donné avec ce code.');
       await tx.review.create({
         data: {
           ...target,
           rating: input.rating,
-          ratingRepair: serviceType === 'REPAIR' ? (input.ratingRepair ?? null) : null,
           ratingWelcome: input.ratingWelcome ?? null,
           ratingValue: input.ratingValue ?? null,
           comment: input.comment?.trim() || null,
@@ -174,9 +158,6 @@ export class ReviewsService {
           status: 'PUBLISHED',
         },
       });
-      if (token.repairJobId) {
-        await tx.repairStatusHistory.create({ data: { repairJobId: token.repairJobId, type: 'REVIEW', message: 'Avis client reçu' } });
-      }
     });
     return { published: true };
   }

@@ -13,8 +13,8 @@ const CLOUDINARY_ROOT = 'yameogo';
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_FORMATS = new Set(['jpeg', 'png', 'webp', 'heif', 'avif']);
 
-export type PublicFolder = 'products' | 'phones' | 'site';
-export type PrivateFolder = 'requests' | 'receipts';
+export type PublicFolder = 'products' | 'site';
+export type PrivateFolder = 'receipts';
 
 export interface StoredImage {
   key: string;
@@ -28,7 +28,7 @@ export interface StoredImage {
  *   (le type annoncé par le navigateur n'est jamais pris en compte).
  * - Les images sont réencodées en WebP, ce qui supprime les métadonnées (EXIF, position GPS).
  * - Fichiers publics (photos du catalogue) : servis directement.
- *   Fichiers privés (justificatifs, photos envoyées par les clients) : préfixe « private/ »,
+ *   Fichiers privés (justificatifs de dépenses) : préfixe « private/ »,
  *   servis uniquement par une route authentifiée.
  * - Pilote « local » (disque, développement) ou « cloudinary » (production).
  *   Sur Cloudinary, les fichiers privés sont de type « authenticated » : accessibles seulement par URL signée,

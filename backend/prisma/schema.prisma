@@ -19,7 +19,6 @@ datasource db {
 
 enum Role {
   MANAGER // Responsable
-  TECHNICIAN // Réparateur
   SELLER // Vendeur
 }
 
@@ -38,9 +37,6 @@ model User {
 
   sessions         Session[]
   auditLogs        AuditLog[]
-  assignedRepairs  RepairJob[]               @relation("RepairTechnician")
-  createdRepairs   RepairJob[]               @relation("RepairCreatedBy")
-  repairHistory    RepairStatusHistory[]
   orderHistory     OrderStatusHistory[]
   createdOrders    Order[]                   @relation("OrderCreatedBy")
   payments         Payment[]
@@ -48,11 +44,8 @@ model User {
   expenses         Expense[]                 @relation("ExpenseCreatedBy")
   voidedExpenses   Expense[]                 @relation("ExpenseVoidedBy")
   purchases        Purchase[]                @relation("PurchaseCreatedBy")
-  repairParts      RepairPart[]
-  quotes           RepairQuote[]
   reviewTokens     ReviewVerificationToken[]
   moderatedReviews Review[]
-  usedPhoneEvents  UsedPhoneEvent[]
   inventoryCounts  InventoryCount[]
   orderReturns     OrderReturn[]
   purchasePayments PurchasePayment[]
@@ -90,7 +83,7 @@ model AuditLog {
   @@index([createdAt])
 }
 
-// Compteurs pour les numéros lisibles (R-2026-00001, C-2026-00001…)
+// Compteurs pour les numéros lisibles (C-2026-00001, A-2026-0001…)
 model Counter {
   key   String @id
   value Int
@@ -105,8 +98,6 @@ model BusinessSettings {
   logoUrl               String?
   heroImageUrl          String?
   heroImageAlt          String?
-  repairImageUrl        String?
-  repairImageAlt        String?
   phonesImageUrl        String?
   phonesImageAlt        String?
   shopImageUrl          String?
@@ -130,10 +121,11 @@ model BusinessSettings {
   taxId                 String?
   publicationDirector   String?
   hostingProvider       String?
-  repairWarrantyText    String?
   deliveryEnabled       Boolean  @default(false)
   deliveryFee           Int      @default(0)
   deliveryArea          String?
+  // Texte libre affiché sur le site : zones, délais, frais de livraison.
+  deliveryInfo          String?
   cashOnDeliveryEnabled Boolean  @default(false)
   payInStoreEnabled     Boolean  @default(true)
   mobileMoneyEnabled    Boolean  @default(false)
@@ -160,48 +152,32 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders         Order[]
-  repairJobs     RepairJob[]
-  repairRequests RepairRequest[]
+  orders Order[]
 }
 
-// ───────────────────────────── Marques et modèles (réparation, compatibilités, occasions)
-
-model Brand {
-  id         String                 @id @default(cuid())
-  name       String                 @unique
-  slug       String                 @unique
-  position   Int                    @default(0)
-  active     Boolean                @default(true)
-  models     PhoneModel[]
-  compat     ProductCompatibility[]
-  usedPhones UsedPhone[]
-}
-
-model PhoneModel {
-  id           String                 @id @default(cuid())
-  brandId      String
-  brand        Brand                  @relation(fields: [brandId], references: [id])
-  name         String
-  slug         String
-  position     Int                    @default(0)
-  active       Boolean                @default(true)
-  createdAt    DateTime               @default(now())
-  repairPrices RepairPrice[]
-  compat       ProductCompatibility[]
-  usedPhones   UsedPhone[]
-  repairJobs   RepairJob[]
-  requests     RepairRequest[]
-
-  @@unique([brandId, slug])
-  @@index([brandId, active])
-}
-
-// ───────────────────────────── Catalogue (accessoires et pièces détachées)
+// ───────────────────────────── Catalogue
+//
+// Une fiche (ProductGroup) est ce que le client consulte : « Samsung Galaxy A56 », « Câble USB-C ».
+// Chaque variante vendable (couleur, RAM, stockage, état, option) est un article (Product) avec
+// son propre prix, son stock et son coût : stock, caisse, ventes et statistiques travaillent par article.
 
 enum ProductKind {
-  ACCESSORY // vendu en boutique et en ligne
-  PART // pièce détachée, usage atelier, jamais publiée
+  PHONE // smartphone
+  ACCESSORY
+}
+
+enum PhoneCondition {
+  NEW // Neuf
+  USED // Occasion
+}
+
+model Brand {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  slug     String         @unique
+  position Int            @default(0)
+  active   Boolean        @default(true)
+  groups   ProductGroup[]
 }
 
 enum ProductStatus {
@@ -210,98 +186,128 @@ enum ProductStatus {
 }
 
 model Category {
-  id          String      @id @default(cuid())
-  kind        ProductKind @default(ACCESSORY)
+  id          String         @id @default(cuid())
+  kind        ProductKind    @default(ACCESSORY)
   name        String
-  slug        String      @unique
+  slug        String         @unique
   description String?
-  position    Int         @default(0)
-  active      Boolean     @default(true)
+  position    Int            @default(0)
+  active      Boolean        @default(true)
   products    Product[]
+  groups      ProductGroup[]
 }
 
 model Supplier {
-  id        String      @id @default(cuid())
+  id        String     @id @default(cuid())
   name      String
   phone     String?
   email     String?
   address   String?
   notes     String?
-  active    Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   products  Product[]
   purchases Purchase[]
-  phones    UsedPhone[]
 }
 
+model ProductGroup {
+  id             String        @id @default(cuid())
+  kind           ProductKind
+  name           String
+  slug           String        @unique
+  // Marque (smartphones ; facultative pour les accessoires).
+  brandId        String?
+  brand          Brand?        @relation(fields: [brandId], references: [id])
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+  description    String        @default("")
+  // Caractéristiques techniques : [{ "label": "Écran", "value": "6,6 pouces AMOLED" }, …]
+  specs          Json          @default("[]")
+  // Nom de l'option libre des variantes (ex. « Longueur », « Modèle compatible ») ; null si non utilisée.
+  optionName     String?
+  // Compatibilité affichée sur la fiche (accessoires) : « iPhone 13, iPhone 14 ».
+  compatibleWith String?
+  published      Boolean       @default(true)
+  featured       Boolean       @default(false)
+  status         ProductStatus @default(ACTIVE)
+  isDemo         Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  variants Product[]
+  images   ProductImage[]
+
+  @@index([kind, status, published])
+  @@index([brandId])
+}
+
+// Article vendable = une variante d'une fiche.
 model Product {
-  id                String        @id @default(cuid())
-  kind              ProductKind   @default(ACCESSORY)
-  sku               String        @unique
-  slug              String        @unique
+  id                String          @id @default(cuid())
+  kind              ProductKind     @default(ACCESSORY)
+  groupId           String
+  group             ProductGroup    @relation(fields: [groupId], references: [id])
+  // Attributs de la variante (null = sans objet pour ce produit).
+  color             String?
+  // Pastille de couleur (#RRGGBB).
+  colorHex          String?
+  ramGb             Int?
+  storageGb         Int?
+  condition         PhoneCondition?
+  optionValue       String?
+  // Prix barré (promotion) : supérieur au prix de vente quand il est renseigné.
+  compareAtPrice    Int?
+  position          Int             @default(0)
+  sku               String          @unique
+  slug              String          @unique
   name              String
-  description       String        @default("")
+  description       String          @default("")
   categoryId        String
-  category          Category      @relation(fields: [categoryId], references: [id])
+  category          Category        @relation(fields: [categoryId], references: [id])
   supplierId        String?
-  supplier          Supplier?     @relation(fields: [supplierId], references: [id])
+  supplier          Supplier?       @relation(fields: [supplierId], references: [id])
   salePrice         Int
   // Coût moyen pondéré courant (XOF). Mis à jour à chaque entrée en stock valorisée.
-  averageCost       Int           @default(0)
+  averageCost       Int             @default(0)
   // Quantité physiquement présente en boutique.
-  stockQuantity     Int           @default(0)
+  stockQuantity     Int             @default(0)
   // Quantité réservée par des commandes non terminées. Disponible = stock - réservé.
-  reservedQuantity  Int           @default(0)
-  lowStockThreshold Int           @default(2)
-  status            ProductStatus @default(ACTIVE)
+  reservedQuantity  Int             @default(0)
+  lowStockThreshold Int             @default(2)
+  status            ProductStatus   @default(ACTIVE)
   // Visible sur le site public (accessoires uniquement).
-  published         Boolean       @default(true)
+  published         Boolean         @default(true)
   // Données de démonstration (environnement de développement).
-  isDemo            Boolean       @default(false)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  isDemo            Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  images        ProductImage[]
-  compatibility ProductCompatibility[]
   movements     InventoryMovement[]
   orderItems    OrderItem[]
   purchaseItems PurchaseItem[]
-  repairParts   RepairPart[]
   countLines    InventoryCountLine[]
 
   @@index([kind, status, published])
   @@index([categoryId])
+  @@index([groupId, position])
 }
 
 model ProductImage {
-  id         String  @id @default(cuid())
-  productId  String
-  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid())
+  groupId    String
+  group      ProductGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  // Couleur illustrée (affichée en premier quand le client choisit cette couleur).
+  color      String?
   // URL externe, ou clé de stockage (images téléversées, déclinées en plusieurs largeurs).
   url        String?
   storageKey String?
-  alt        String  @default("")
-  position   Int     @default(0)
+  alt        String       @default("")
+  position   Int          @default(0)
   width      Int?
   height     Int?
 
-  @@index([productId, position])
-}
-
-// Compatibilité : une marque entière (phoneModelId nul) ou un modèle précis.
-model ProductCompatibility {
-  id           String      @id @default(cuid())
-  productId    String
-  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  brandId      String
-  brand        Brand       @relation(fields: [brandId], references: [id])
-  phoneModelId String?
-  phoneModel   PhoneModel? @relation(fields: [phoneModelId], references: [id])
-
-  @@index([brandId])
-  @@index([phoneModelId])
-  @@index([productId])
+  @@index([groupId, position])
 }
 
 // ───────────────────────────── Stocks
@@ -312,8 +318,6 @@ enum MovementType {
   PURCHASE_CANCEL // annulation d'un approvisionnement validé
   SALE // sortie à la vente (commande terminée)
   SALE_RETURN // retour client remis en stock
-  REPAIR_USE // pièce consommée par une réparation
-  REPAIR_RETURN // pièce retirée d'une réparation et remise en stock
   ADJUSTMENT // correction manuelle justifiée
   COUNT // correction issue d'un inventaire
 }
@@ -332,7 +336,6 @@ model InventoryMovement {
   reason           String?
   purchaseItemId   String?
   orderItemId      String?
-  repairPartId     String?
   orderReturnId    String?
   countLineId      String?
   userId           String?
@@ -437,321 +440,6 @@ model PurchasePayment {
   createdAt    DateTime      @default(now())
 }
 
-// ───────────────────────────── Téléphones d'occasion (exemplaires uniques)
-
-enum UsedPhoneStatus {
-  PENDING_CHECK // En attente de vérification
-  AVAILABLE
-  RESERVED
-  SOLD
-  RETURNED
-  ARCHIVED
-}
-
-// Catégorie commerciale d'un téléphone.
-enum PhoneCondition {
-  NEW // Neuf
-  IMPORTED // « Venu » : déjà utilisé, importé d'Europe ou des États-Unis
-  USED // Occasion : utilisé localement
-}
-
-enum PhoneGrade {
-  LIKE_NEW
-  VERY_GOOD
-  GOOD
-  FAIR
-}
-
-model UsedPhone {
-  id                  String          @id @default(cuid())
-  reference           String          @unique
-  slug                String          @unique
-  brandId             String
-  brand               Brand           @relation(fields: [brandId], references: [id])
-  phoneModelId        String?
-  phoneModel          PhoneModel?     @relation(fields: [phoneModelId], references: [id])
-  modelName           String
-  condition           PhoneCondition  @default(USED)
-  storageGb           Int?
-  ramGb               Int?
-  color               String?
-  grade               PhoneGrade
-  batteryHealth       Int?
-  knownDefects        String?
-  includedAccessories String?
-  description         String?
-  purchasePrice       Int
-  salePrice           Int
-  warrantyMonths      Int             @default(0)
-  acquiredAt          DateTime
-  acquiredFrom        String?
-  supplierId          String?
-  supplier            Supplier?       @relation(fields: [supplierId], references: [id])
-  // IMEI chiffré (AES-256-GCM) ; empreinte HMAC pour l'unicité ; 4 derniers chiffres pour l'affichage interne.
-  imeiEncrypted       String?
-  imeiHash            String?         @unique
-  imeiLast4           String?
-  status              UsedPhoneStatus @default(PENDING_CHECK)
-  soldAt              DateTime?
-  isDemo              Boolean         @default(false)
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-
-  images     UsedPhoneImage[]
-  events     UsedPhoneEvent[]
-  orderItems OrderItem[]
-
-  @@index([status])
-  @@index([brandId])
-  @@index([condition, status])
-}
-
-model UsedPhoneImage {
-  id          String    @id @default(cuid())
-  usedPhoneId String
-  usedPhone   UsedPhone @relation(fields: [usedPhoneId], references: [id], onDelete: Cascade)
-  url         String?
-  storageKey  String?
-  alt         String    @default("")
-  position    Int       @default(0)
-  width       Int?
-  height      Int?
-
-  @@index([usedPhoneId, position])
-}
-
-model UsedPhoneEvent {
-  id          String           @id @default(cuid())
-  usedPhoneId String
-  usedPhone   UsedPhone        @relation(fields: [usedPhoneId], references: [id], onDelete: Cascade)
-  type        String
-  fromStatus  UsedPhoneStatus?
-  toStatus    UsedPhoneStatus?
-  message     String
-  userId      String?
-  user        User?            @relation(fields: [userId], references: [id])
-  createdAt   DateTime         @default(now())
-
-  @@index([usedPhoneId, createdAt])
-}
-
-// ───────────────────────────── Réparations : catalogue de tarifs
-
-model RepairType {
-  id          String          @id @default(cuid())
-  name        String          @unique
-  slug        String          @unique
-  description String?
-  position    Int             @default(0)
-  active      Boolean         @default(true)
-  prices      RepairPrice[]
-  requests    RepairRequest[]
-  jobs        RepairJob[]
-}
-
-model RepairPrice {
-  id              String     @id @default(cuid())
-  phoneModelId    String
-  phoneModel      PhoneModel @relation(fields: [phoneModelId], references: [id])
-  repairTypeId    String
-  repairType      RepairType @relation(fields: [repairTypeId], references: [id])
-  partsPrice      Int
-  laborPrice      Int
-  // Toujours égal à partsPrice + laborPrice (calculé par le backend).
-  totalPrice      Int
-  durationMinutes Int?
-  conditions      String?
-  active          Boolean    @default(true)
-  isDemo          Boolean    @default(false)
-  updatedAt       DateTime   @updatedAt
-
-  @@unique([phoneModelId, repairTypeId])
-}
-
-// ───────────────────────────── Réparations : demandes de devis en ligne
-
-enum RepairRequestStatus {
-  NEW
-  CONTACTED
-  CONVERTED
-  CLOSED
-}
-
-model RepairRequest {
-  id               String              @id @default(cuid())
-  reference        String              @unique
-  brandName        String
-  phoneModelId     String?
-  phoneModel       PhoneModel?         @relation(fields: [phoneModelId], references: [id])
-  modelName        String
-  repairTypeId     String?
-  repairType       RepairType?         @relation(fields: [repairTypeId], references: [id])
-  issueLabel       String
-  // Estimation affichée au client au moment de la demande (copie figée du tarif).
-  estimatedParts   Int?
-  estimatedLabor   Int?
-  estimatedTotal   Int?
-  estimatedMinutes Int?
-  customerName     String?
-  customerPhone    String
-  customerId       String?
-  customer         Customer?           @relation(fields: [customerId], references: [id])
-  description      String?
-  photoKey         String?
-  status           RepairRequestStatus @default(NEW)
-  internalNote     String?
-  repairJobId      String?             @unique
-  repairJob        RepairJob?          @relation(fields: [repairJobId], references: [id])
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  @@index([status, createdAt])
-}
-
-// ───────────────────────────── Réparations : dossiers en atelier
-
-enum RepairStatus {
-  RECEIVED // Téléphone reçu
-  DIAGNOSING // Diagnostic en cours
-  QUOTE_PENDING // Devis à confirmer
-  QUOTE_ACCEPTED // Devis accepté
-  WAITING_PARTS // En attente de pièces
-  IN_PROGRESS // Réparation en cours
-  COMPLETED // Réparation terminée
-  PICKED_UP // Téléphone récupéré
-  CANCELLED // Annulée
-}
-
-model RepairJob {
-  id               String           @id @default(cuid())
-  number           String           @unique
-  // Code de suivi aléatoire remis au client (consultation et décision sur le devis).
-  trackingCode     String
-  customerId       String
-  customer         Customer         @relation(fields: [customerId], references: [id])
-  brandName        String
-  phoneModelId     String?
-  phoneModel       PhoneModel?      @relation(fields: [phoneModelId], references: [id])
-  modelName        String
-  imeiEncrypted    String?
-  imeiLast4        String?
-  repairTypeId     String?
-  repairType       RepairType?      @relation(fields: [repairTypeId], references: [id])
-  reportedIssue    String
-  diagnosis        String?
-  workDone         String?
-  technicianId     String?
-  technician       User?            @relation("RepairTechnician", fields: [technicianId], references: [id])
-  status           RepairStatus     @default(RECEIVED)
-  receivedAt       DateTime         @default(now())
-  dueAt            DateTime?
-  completedAt      DateTime?
-  cancelledAt      DateTime?
-  // Remise du téléphone au client : information distincte du statut du dossier.
-  deviceReturnedAt DateTime?
-  billedAmount     Int              @default(0)
-  consumablesCost  Int              @default(0)
-  otherDirectCosts Int              @default(0)
-  otherCostsNote   String?
-  amountPaid       Int              @default(0)
-  paymentStatus    SettlementStatus @default(UNPAID)
-  internalNotes    String?
-  createdById      String
-  createdBy        User             @relation("RepairCreatedBy", fields: [createdById], references: [id])
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  request      RepairRequest?
-  parts        RepairPart[]
-  history      RepairStatusHistory[]
-  quotes       RepairQuote[]
-  payments     Payment[]
-  review       Review?
-  reviewTokens ReviewVerificationToken[]
-
-  @@index([status])
-  @@index([completedAt])
-  @@index([receivedAt])
-  @@index([customerId])
-}
-
-enum PartSource {
-  STOCK
-  EXTERNAL // achetée spécifiquement pour la réparation, hors stock
-}
-
-enum PartStatus {
-  USED
-  RETURNED // retirée de la réparation (remise en stock si elle en provenait)
-}
-
-model RepairPart {
-  id          String     @id @default(cuid())
-  repairJobId String
-  repairJob   RepairJob  @relation(fields: [repairJobId], references: [id])
-  source      PartSource
-  productId   String?
-  product     Product?   @relation(fields: [productId], references: [id])
-  label       String
-  sku         String?
-  quantity    Int
-  // Coût unitaire figé au moment de l'utilisation (coût moyen du stock ou prix d'achat externe).
-  unitCost    Int
-  totalCost   Int
-  status      PartStatus @default(USED)
-  returnedAt  DateTime?
-  returnNote  String?
-  addedById   String
-  addedBy     User       @relation(fields: [addedById], references: [id])
-  createdAt   DateTime   @default(now())
-
-  @@index([repairJobId])
-}
-
-model RepairStatusHistory {
-  id          String        @id @default(cuid())
-  repairJobId String
-  repairJob   RepairJob     @relation(fields: [repairJobId], references: [id])
-  // STATUS, QUOTE, PART, PAYMENT, PRICE, DEVICE, NOTE, REVIEW
-  type        String
-  fromStatus  RepairStatus?
-  toStatus    RepairStatus?
-  message     String
-  userId      String?
-  user        User?         @relation(fields: [userId], references: [id])
-  createdAt   DateTime      @default(now())
-
-  @@index([repairJobId, createdAt])
-}
-
-enum QuoteStatus {
-  PENDING
-  ACCEPTED
-  REFUSED
-  SUPERSEDED
-}
-
-model RepairQuote {
-  id              String      @id @default(cuid())
-  repairJobId     String
-  repairJob       RepairJob   @relation(fields: [repairJobId], references: [id])
-  version         Int
-  amount          Int
-  details         String
-  durationMinutes Int?
-  status          QuoteStatus @default(PENDING)
-  decidedAt       DateTime?
-  // CUSTOMER (en ligne) ou STAFF (accord oral enregistré en boutique)
-  decidedVia      String?
-  createdById     String
-  createdBy       User        @relation(fields: [createdById], references: [id])
-  createdAt       DateTime    @default(now())
-
-  @@unique([repairJobId, version])
-}
-
-// ───────────────────────────── Commandes et ventes
-
 enum OrderStatus {
   PENDING // En attente de confirmation
   CONFIRMED
@@ -820,24 +508,21 @@ model Order {
 }
 
 model OrderItem {
-  id               String     @id @default(cuid())
+  id               String  @id @default(cuid())
   orderId          String
-  order            Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId        String?
-  product          Product?   @relation(fields: [productId], references: [id])
-  usedPhoneId      String?
-  usedPhone        UsedPhone? @relation(fields: [usedPhoneId], references: [id])
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product @relation(fields: [productId], references: [id])
   label            String
   sku              String
   quantity         Int
   unitPrice        Int
   lineTotal        Int
-  // Coût unitaire figé lors de la sortie de stock (coût moyen ou prix d'achat du téléphone).
+  // Coût unitaire figé lors de la sortie de stock (coût moyen de l'article).
   unitCost         Int?
-  returnedQuantity Int        @default(0)
+  returnedQuantity Int     @default(0)
 
   @@index([productId])
-  @@index([usedPhoneId])
 }
 
 model OrderStatusHistory {
@@ -873,7 +558,7 @@ model OrderReturn {
   @@index([createdAt])
 }
 
-// ───────────────────────────── Paiements (commandes et réparations)
+// ───────────────────────────── Paiements (ventes)
 
 enum PaymentMethod {
   CASH
@@ -903,10 +588,8 @@ model Payment {
   status            PaymentStatus
   // Toujours positif ; le sens est donné par `kind`.
   amount            Int
-  orderId           String?
-  order             Order?        @relation(fields: [orderId], references: [id])
-  repairJobId       String?
-  repairJob         RepairJob?    @relation(fields: [repairJobId], references: [id])
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id])
   // MANUAL (saisi par l'équipe) ou nom du prestataire (PAYGATE…)
   provider          String        @default("MANUAL")
   providerReference String?
@@ -925,7 +608,6 @@ model Payment {
   @@unique([provider, providerReference])
   @@index([status, confirmedAt])
   @@index([orderId])
-  @@index([repairJobId])
 }
 
 // ───────────────────────────── Dépenses générales
@@ -981,7 +663,6 @@ enum ReviewStatus {
 }
 
 enum ReviewService {
-  REPAIR
   ACCESSORY_PURCHASE
   PHONE_PURCHASE
   OTHER
@@ -990,7 +671,6 @@ enum ReviewService {
 model Review {
   id             String        @id @default(cuid())
   rating         Int
-  ratingRepair   Int?
   ratingWelcome  Int?
   ratingValue    Int?
   comment        String?
@@ -999,9 +679,7 @@ model Review {
   serviceType    ReviewService
   status         ReviewStatus  @default(PENDING)
   verified       Boolean       @default(false)
-  // Un dossier de réparation ou une vente ne peut porter qu'un seul avis.
-  repairJobId    String?       @unique
-  repairJob      RepairJob?    @relation(fields: [repairJobId], references: [id])
+  // Une vente ne peut porter qu'un seul avis.
   orderId        String?       @unique
   order          Order?        @relation(fields: [orderId], references: [id])
   moderatedAt    DateTime?
@@ -1016,23 +694,20 @@ model Review {
   @@index([status, createdAt])
 }
 
-/// Code d'avis : remis au client pour une réparation ou une vente ; sans code, pas d'avis.
+/// Code d'avis : remis au client pour chaque vente ; sans code, pas d'avis.
 model ReviewVerificationToken {
-  id            String     @id @default(cuid())
-  repairJobId   String?
-  repairJob     RepairJob? @relation(fields: [repairJobId], references: [id])
-  orderId       String?
-  order         Order?     @relation(fields: [orderId], references: [id])
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id])
   // Empreinte HMAC du code (recherche) ; le code est aussi conservé chiffré pour rester affichable dans l'administration.
-  codeHash      String     @unique
+  codeHash      String    @unique
   codeEncrypted String?
   createdById   String
-  createdBy     User       @relation(fields: [createdById], references: [id])
-  createdAt     DateTime   @default(now())
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
   expiresAt     DateTime
   revokedAt     DateTime?
   usedAt        DateTime?
 
-  @@index([repairJobId])
   @@index([orderId])
 }

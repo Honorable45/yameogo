@@ -1,36 +1,4 @@
-import { allocateProRata, averageCostAfterRemoval, computeRepairFinancials, settlementStatus, weightedAverageCost } from './money';
-
-describe('Marge brute d’une réparation', () => {
-  it('reproduit l’exemple du cahier des charges (15 000 − 6 000 − 500 − 500 = 8 000)', () => {
-    const f = computeRepairFinancials({
-      billedAmount: 15000,
-      parts: [{ totalCost: 6000, status: 'USED' }],
-      consumablesCost: 500,
-      otherDirectCosts: 500,
-    });
-    expect(f.directCosts).toBe(7000);
-    expect(f.grossMargin).toBe(8000);
-  });
-
-  it('additionne plusieurs pièces et ignore les pièces retirées', () => {
-    const f = computeRepairFinancials({
-      billedAmount: 30000,
-      parts: [
-        { totalCost: 9000, status: 'USED' },
-        { totalCost: 4000, status: 'USED' },
-        { totalCost: 18000, status: 'RETURNED' },
-      ],
-      consumablesCost: 0,
-      otherDirectCosts: 1000,
-    });
-    expect(f.partsCost).toBe(13000);
-    expect(f.grossMargin).toBe(16000);
-  });
-
-  it('peut être négative (réparation à perte)', () => {
-    expect(computeRepairFinancials({ billedAmount: 5000, parts: [{ totalCost: 8000, status: 'USED' }], consumablesCost: 0, otherDirectCosts: 0 }).grossMargin).toBe(-3000);
-  });
-});
+import { allocateProRata, averageCostAfterRemoval, settlementStatus, weightedAverageCost } from './money';
 
 describe('Coût moyen pondéré', () => {
   it('pondère le stock existant et l’entrée', () => {

@@ -10,7 +10,6 @@ import { ReviewsService, SERVICE_LABELS, type ReviewTarget } from './reviews.ser
 
 class ReviewDto {
   @IsInt() @Min(1) @Max(5) rating: number;
-  @IsOptional() @IsInt() @Min(1) @Max(5) ratingRepair?: number;
   @IsOptional() @IsInt() @Min(1) @Max(5) ratingWelcome?: number;
   @IsOptional() @IsInt() @Min(1) @Max(5) ratingValue?: number;
   @IsOptional() @IsString() @MaxLength(1500) comment?: string;
@@ -37,7 +36,6 @@ class AdminQuery extends PageQuery {
 const publicSelect = {
   id: true,
   rating: true,
-  ratingRepair: true,
   ratingWelcome: true,
   ratingValue: true,
   comment: true,
@@ -62,7 +60,7 @@ export class ReviewsController {
     const [rows, total, agg, verifiedCount] = await Promise.all([
       this.prisma.review.findMany({ where, select: publicSelect, orderBy: { createdAt: 'desc' }, ...skipTake(q) }),
       this.prisma.review.count({ where }),
-      this.prisma.review.aggregate({ where, _avg: { rating: true, ratingRepair: true, ratingWelcome: true, ratingValue: true } }),
+      this.prisma.review.aggregate({ where, _avg: { rating: true, ratingWelcome: true, ratingValue: true } }),
       this.prisma.review.count({ where: { ...where, verified: true } }),
     ]);
     const round = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
@@ -72,7 +70,6 @@ export class ReviewsController {
         count: total,
         verifiedCount,
         average: round(agg._avg.rating),
-        averageRepair: round(agg._avg.ratingRepair),
         averageWelcome: round(agg._avg.ratingWelcome),
         averageValue: round(agg._avg.ratingValue),
       },
@@ -101,7 +98,7 @@ export class ReviewsController {
       this.prisma.review.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        include: { repairJob: { select: { id: true, number: true } }, order: { select: { id: true, number: true } }, moderatedBy: { select: { name: true } } },
+        include: { order: { select: { id: true, number: true } }, moderatedBy: { select: { name: true } } },
         ...skipTake(q),
       }),
       this.prisma.review.count({ where }),
@@ -128,21 +125,22 @@ export class ReviewsController {
   }
 }
 
-/** « reparation » ou « vente » uniquement. */
+/** « vente » uniquement (chemin conservé pour pouvoir accueillir d'autres types plus tard). */
 class KindPipe implements PipeTransform<string> {
   transform(value: string) {
-    if (value !== 'reparation' && value !== 'vente') throw new NotFoundException();
+    if (value !== 'vente') throw new NotFoundException();
     return value;
   }
 }
 
-/** Codes d'avis d'une réparation ou d'une vente (affichés dans l'administration, remis au client). */
+/** Codes d'avis d'une vente (affichés dans l'administration, imprimés sur le ticket, remis au client). */
 @Controller('review-codes')
 export class ReviewCodesController {
   constructor(private readonly reviews: ReviewsService) {}
 
   private target(kind: string, id: string): ReviewTarget {
-    return { kind: kind === 'reparation' ? 'repair' : 'order', id };
+    void kind;
+    return { kind: 'order', id };
   }
 
   @Get(':kind/:id')

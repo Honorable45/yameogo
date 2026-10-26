@@ -76,37 +76,3 @@ export function allocateProRata(total: number, weights: number[]): number[] {
   for (let k = 0; remainder > 0; k = (k + 1) % order.length, remainder--) shares[order[k].i] += 1;
   return shares;
 }
-
-export interface RepairCostInput {
-  billedAmount: number;
-  parts: { totalCost: number; status: 'USED' | 'RETURNED' }[];
-  consumablesCost: number;
-  otherDirectCosts: number;
-}
-
-export interface RepairFinancials {
-  billedAmount: number;
-  partsCost: number;
-  consumablesCost: number;
-  otherDirectCosts: number;
-  directCosts: number;
-  grossMargin: number;
-}
-
-/**
- * Marge brute d'une réparation :
- * montant facturé − pièces utilisées − consommables − autres coûts directs.
- * Les pièces retirées (RETURNED) ne sont pas comptées.
- */
-export function computeRepairFinancials(input: RepairCostInput): RepairFinancials {
-  const partsCost = sum(input.parts.filter((p) => p.status === 'USED').map((p) => p.totalCost));
-  const directCosts = partsCost + input.consumablesCost + input.otherDirectCosts;
-  return {
-    billedAmount: input.billedAmount,
-    partsCost,
-    consumablesCost: input.consumablesCost,
-    otherDirectCosts: input.otherDirectCosts,
-    directCosts,
-    grossMargin: input.billedAmount - directCosts,
-  };
-}

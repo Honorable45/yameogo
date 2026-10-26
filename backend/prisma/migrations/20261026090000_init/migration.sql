@@ -1,41 +1,26 @@
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('MANAGER', 'TECHNICIAN', 'SELLER');
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "ProductKind" AS ENUM ('ACCESSORY', 'PART');
+CREATE TYPE "Role" AS ENUM ('MANAGER', 'SELLER');
+
+-- CreateEnum
+CREATE TYPE "ProductKind" AS ENUM ('PHONE', 'ACCESSORY');
+
+-- CreateEnum
+CREATE TYPE "PhoneCondition" AS ENUM ('NEW', 'USED');
 
 -- CreateEnum
 CREATE TYPE "ProductStatus" AS ENUM ('ACTIVE', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "MovementType" AS ENUM ('INITIAL', 'PURCHASE', 'PURCHASE_CANCEL', 'SALE', 'SALE_RETURN', 'REPAIR_USE', 'REPAIR_RETURN', 'ADJUSTMENT', 'COUNT');
+CREATE TYPE "MovementType" AS ENUM ('INITIAL', 'PURCHASE', 'PURCHASE_CANCEL', 'SALE', 'SALE_RETURN', 'ADJUSTMENT', 'COUNT');
 
 -- CreateEnum
 CREATE TYPE "PurchaseStatus" AS ENUM ('DRAFT', 'VALIDATED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "SettlementStatus" AS ENUM ('UNPAID', 'PARTIAL', 'PAID');
-
--- CreateEnum
-CREATE TYPE "UsedPhoneStatus" AS ENUM ('PENDING_CHECK', 'AVAILABLE', 'RESERVED', 'SOLD', 'RETURNED', 'ARCHIVED');
-
--- CreateEnum
-CREATE TYPE "PhoneGrade" AS ENUM ('LIKE_NEW', 'VERY_GOOD', 'GOOD', 'FAIR');
-
--- CreateEnum
-CREATE TYPE "RepairRequestStatus" AS ENUM ('NEW', 'CONTACTED', 'CONVERTED', 'CLOSED');
-
--- CreateEnum
-CREATE TYPE "RepairStatus" AS ENUM ('RECEIVED', 'DIAGNOSING', 'QUOTE_PENDING', 'QUOTE_ACCEPTED', 'WAITING_PARTS', 'IN_PROGRESS', 'COMPLETED', 'PICKED_UP', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "PartSource" AS ENUM ('STOCK', 'EXTERNAL');
-
--- CreateEnum
-CREATE TYPE "PartStatus" AS ENUM ('USED', 'RETURNED');
-
--- CreateEnum
-CREATE TYPE "QuoteStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REFUSED', 'SUPERSEDED');
 
 -- CreateEnum
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED');
@@ -68,7 +53,7 @@ CREATE TYPE "ExpenseStatus" AS ENUM ('ACTIVE', 'VOIDED');
 CREATE TYPE "ReviewStatus" AS ENUM ('PENDING', 'PUBLISHED', 'HIDDEN', 'FLAGGED');
 
 -- CreateEnum
-CREATE TYPE "ReviewService" AS ENUM ('REPAIR', 'ACCESSORY_PURCHASE', 'PHONE_PURCHASE', 'OTHER');
+CREATE TYPE "ReviewService" AS ENUM ('ACCESSORY_PURCHASE', 'PHONE_PURCHASE', 'OTHER');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -133,6 +118,13 @@ CREATE TABLE "BusinessSettings" (
     "logoUrl" TEXT,
     "heroImageUrl" TEXT,
     "heroImageAlt" TEXT,
+    "phonesImageUrl" TEXT,
+    "phonesImageAlt" TEXT,
+    "shopImageUrl" TEXT,
+    "shopImageAlt" TEXT,
+    "tiktokUrl" TEXT,
+    "instagramUrl" TEXT,
+    "facebookUrl" TEXT,
     "phone" TEXT,
     "whatsapp" TEXT,
     "email" TEXT,
@@ -140,16 +132,18 @@ CREATE TABLE "BusinessSettings" (
     "city" TEXT,
     "country" TEXT,
     "mapUrl" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
     "legalName" TEXT,
     "legalForm" TEXT,
     "registrationNumber" TEXT,
     "taxId" TEXT,
     "publicationDirector" TEXT,
     "hostingProvider" TEXT,
-    "repairWarrantyText" TEXT,
     "deliveryEnabled" BOOLEAN NOT NULL DEFAULT false,
     "deliveryFee" INTEGER NOT NULL DEFAULT 0,
     "deliveryArea" TEXT,
+    "deliveryInfo" TEXT,
     "cashOnDeliveryEnabled" BOOLEAN NOT NULL DEFAULT false,
     "payInStoreEnabled" BOOLEAN NOT NULL DEFAULT true,
     "mobileMoneyEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -194,19 +188,6 @@ CREATE TABLE "Brand" (
 );
 
 -- CreateTable
-CREATE TABLE "PhoneModel" (
-    "id" TEXT NOT NULL,
-    "brandId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "position" INTEGER NOT NULL DEFAULT 0,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "PhoneModel_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Category" (
     "id" TEXT NOT NULL,
     "kind" "ProductKind" NOT NULL DEFAULT 'ACCESSORY',
@@ -235,9 +216,40 @@ CREATE TABLE "Supplier" (
 );
 
 -- CreateTable
+CREATE TABLE "ProductGroup" (
+    "id" TEXT NOT NULL,
+    "kind" "ProductKind" NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "brandId" TEXT,
+    "categoryId" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "specs" JSONB NOT NULL DEFAULT '[]',
+    "optionName" TEXT,
+    "compatibleWith" TEXT,
+    "published" BOOLEAN NOT NULL DEFAULT true,
+    "featured" BOOLEAN NOT NULL DEFAULT false,
+    "status" "ProductStatus" NOT NULL DEFAULT 'ACTIVE',
+    "isDemo" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProductGroup_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Product" (
     "id" TEXT NOT NULL,
     "kind" "ProductKind" NOT NULL DEFAULT 'ACCESSORY',
+    "groupId" TEXT NOT NULL,
+    "color" TEXT,
+    "colorHex" TEXT,
+    "ramGb" INTEGER,
+    "storageGb" INTEGER,
+    "condition" "PhoneCondition",
+    "optionValue" TEXT,
+    "compareAtPrice" INTEGER,
+    "position" INTEGER NOT NULL DEFAULT 0,
     "sku" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -261,7 +273,8 @@ CREATE TABLE "Product" (
 -- CreateTable
 CREATE TABLE "ProductImage" (
     "id" TEXT NOT NULL,
-    "productId" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "color" TEXT,
     "url" TEXT,
     "storageKey" TEXT,
     "alt" TEXT NOT NULL DEFAULT '',
@@ -270,16 +283,6 @@ CREATE TABLE "ProductImage" (
     "height" INTEGER,
 
     CONSTRAINT "ProductImage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ProductCompatibility" (
-    "id" TEXT NOT NULL,
-    "productId" TEXT NOT NULL,
-    "brandId" TEXT NOT NULL,
-    "phoneModelId" TEXT,
-
-    CONSTRAINT "ProductCompatibility_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -294,7 +297,6 @@ CREATE TABLE "InventoryMovement" (
     "reason" TEXT,
     "purchaseItemId" TEXT,
     "orderItemId" TEXT,
-    "repairPartId" TEXT,
     "orderReturnId" TEXT,
     "countLineId" TEXT,
     "userId" TEXT,
@@ -381,210 +383,6 @@ CREATE TABLE "PurchasePayment" (
 );
 
 -- CreateTable
-CREATE TABLE "UsedPhone" (
-    "id" TEXT NOT NULL,
-    "reference" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "brandId" TEXT NOT NULL,
-    "phoneModelId" TEXT,
-    "modelName" TEXT NOT NULL,
-    "storageGb" INTEGER,
-    "ramGb" INTEGER,
-    "color" TEXT,
-    "grade" "PhoneGrade" NOT NULL,
-    "batteryHealth" INTEGER,
-    "knownDefects" TEXT,
-    "includedAccessories" TEXT,
-    "description" TEXT,
-    "purchasePrice" INTEGER NOT NULL,
-    "salePrice" INTEGER NOT NULL,
-    "warrantyMonths" INTEGER NOT NULL DEFAULT 0,
-    "acquiredAt" TIMESTAMP(3) NOT NULL,
-    "acquiredFrom" TEXT,
-    "supplierId" TEXT,
-    "imeiEncrypted" TEXT,
-    "imeiHash" TEXT,
-    "imeiLast4" TEXT,
-    "status" "UsedPhoneStatus" NOT NULL DEFAULT 'PENDING_CHECK',
-    "soldAt" TIMESTAMP(3),
-    "isDemo" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "UsedPhone_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "UsedPhoneImage" (
-    "id" TEXT NOT NULL,
-    "usedPhoneId" TEXT NOT NULL,
-    "url" TEXT,
-    "storageKey" TEXT,
-    "alt" TEXT NOT NULL DEFAULT '',
-    "position" INTEGER NOT NULL DEFAULT 0,
-    "width" INTEGER,
-    "height" INTEGER,
-
-    CONSTRAINT "UsedPhoneImage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "UsedPhoneEvent" (
-    "id" TEXT NOT NULL,
-    "usedPhoneId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "fromStatus" "UsedPhoneStatus",
-    "toStatus" "UsedPhoneStatus",
-    "message" TEXT NOT NULL,
-    "userId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "UsedPhoneEvent_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairType" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "description" TEXT,
-    "position" INTEGER NOT NULL DEFAULT 0,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-
-    CONSTRAINT "RepairType_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairPrice" (
-    "id" TEXT NOT NULL,
-    "phoneModelId" TEXT NOT NULL,
-    "repairTypeId" TEXT NOT NULL,
-    "partsPrice" INTEGER NOT NULL,
-    "laborPrice" INTEGER NOT NULL,
-    "totalPrice" INTEGER NOT NULL,
-    "durationMinutes" INTEGER,
-    "conditions" TEXT,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "RepairPrice_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairRequest" (
-    "id" TEXT NOT NULL,
-    "reference" TEXT NOT NULL,
-    "brandName" TEXT NOT NULL,
-    "phoneModelId" TEXT,
-    "modelName" TEXT NOT NULL,
-    "repairTypeId" TEXT,
-    "issueLabel" TEXT NOT NULL,
-    "estimatedParts" INTEGER,
-    "estimatedLabor" INTEGER,
-    "estimatedTotal" INTEGER,
-    "estimatedMinutes" INTEGER,
-    "customerName" TEXT,
-    "customerPhone" TEXT NOT NULL,
-    "customerId" TEXT,
-    "description" TEXT,
-    "photoKey" TEXT,
-    "status" "RepairRequestStatus" NOT NULL DEFAULT 'NEW',
-    "internalNote" TEXT,
-    "repairJobId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "RepairRequest_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairJob" (
-    "id" TEXT NOT NULL,
-    "number" TEXT NOT NULL,
-    "trackingCode" TEXT NOT NULL,
-    "customerId" TEXT NOT NULL,
-    "brandName" TEXT NOT NULL,
-    "phoneModelId" TEXT,
-    "modelName" TEXT NOT NULL,
-    "imeiEncrypted" TEXT,
-    "imeiLast4" TEXT,
-    "repairTypeId" TEXT,
-    "reportedIssue" TEXT NOT NULL,
-    "diagnosis" TEXT,
-    "workDone" TEXT,
-    "technicianId" TEXT,
-    "status" "RepairStatus" NOT NULL DEFAULT 'RECEIVED',
-    "receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "dueAt" TIMESTAMP(3),
-    "completedAt" TIMESTAMP(3),
-    "cancelledAt" TIMESTAMP(3),
-    "deviceReturnedAt" TIMESTAMP(3),
-    "billedAmount" INTEGER NOT NULL DEFAULT 0,
-    "consumablesCost" INTEGER NOT NULL DEFAULT 0,
-    "otherDirectCosts" INTEGER NOT NULL DEFAULT 0,
-    "otherCostsNote" TEXT,
-    "amountPaid" INTEGER NOT NULL DEFAULT 0,
-    "paymentStatus" "SettlementStatus" NOT NULL DEFAULT 'UNPAID',
-    "internalNotes" TEXT,
-    "createdById" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "RepairJob_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairPart" (
-    "id" TEXT NOT NULL,
-    "repairJobId" TEXT NOT NULL,
-    "source" "PartSource" NOT NULL,
-    "productId" TEXT,
-    "label" TEXT NOT NULL,
-    "sku" TEXT,
-    "quantity" INTEGER NOT NULL,
-    "unitCost" INTEGER NOT NULL,
-    "totalCost" INTEGER NOT NULL,
-    "status" "PartStatus" NOT NULL DEFAULT 'USED',
-    "returnedAt" TIMESTAMP(3),
-    "returnNote" TEXT,
-    "addedById" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "RepairPart_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairStatusHistory" (
-    "id" TEXT NOT NULL,
-    "repairJobId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "fromStatus" "RepairStatus",
-    "toStatus" "RepairStatus",
-    "message" TEXT NOT NULL,
-    "userId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "RepairStatusHistory_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RepairQuote" (
-    "id" TEXT NOT NULL,
-    "repairJobId" TEXT NOT NULL,
-    "version" INTEGER NOT NULL,
-    "amount" INTEGER NOT NULL,
-    "details" TEXT NOT NULL,
-    "durationMinutes" INTEGER,
-    "status" "QuoteStatus" NOT NULL DEFAULT 'PENDING',
-    "decidedAt" TIMESTAMP(3),
-    "decidedVia" TEXT,
-    "createdById" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "RepairQuote_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Order" (
     "id" TEXT NOT NULL,
     "number" TEXT NOT NULL,
@@ -618,8 +416,7 @@ CREATE TABLE "Order" (
 CREATE TABLE "OrderItem" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
-    "productId" TEXT,
-    "usedPhoneId" TEXT,
+    "productId" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "sku" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
@@ -667,8 +464,7 @@ CREATE TABLE "Payment" (
     "method" "PaymentMethod" NOT NULL,
     "status" "PaymentStatus" NOT NULL,
     "amount" INTEGER NOT NULL,
-    "orderId" TEXT,
-    "repairJobId" TEXT,
+    "orderId" TEXT NOT NULL,
     "provider" TEXT NOT NULL DEFAULT 'MANUAL',
     "providerReference" TEXT,
     "externalReference" TEXT,
@@ -709,7 +505,6 @@ CREATE TABLE "Expense" (
 CREATE TABLE "Review" (
     "id" TEXT NOT NULL,
     "rating" INTEGER NOT NULL,
-    "ratingRepair" INTEGER,
     "ratingWelcome" INTEGER,
     "ratingValue" INTEGER,
     "comment" TEXT,
@@ -717,7 +512,7 @@ CREATE TABLE "Review" (
     "serviceType" "ReviewService" NOT NULL,
     "status" "ReviewStatus" NOT NULL DEFAULT 'PENDING',
     "verified" BOOLEAN NOT NULL DEFAULT false,
-    "repairJobId" TEXT,
+    "orderId" TEXT,
     "moderatedAt" TIMESTAMP(3),
     "moderatedById" TEXT,
     "moderationNote" TEXT,
@@ -731,8 +526,9 @@ CREATE TABLE "Review" (
 -- CreateTable
 CREATE TABLE "ReviewVerificationToken" (
     "id" TEXT NOT NULL,
-    "repairJobId" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
     "codeHash" TEXT NOT NULL,
+    "codeEncrypted" TEXT,
     "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expiresAt" TIMESTAMP(3) NOT NULL,
@@ -770,13 +566,16 @@ CREATE UNIQUE INDEX "Brand_name_key" ON "Brand"("name");
 CREATE UNIQUE INDEX "Brand_slug_key" ON "Brand"("slug");
 
 -- CreateIndex
-CREATE INDEX "PhoneModel_brandId_active_idx" ON "PhoneModel"("brandId", "active");
-
--- CreateIndex
-CREATE UNIQUE INDEX "PhoneModel_brandId_slug_key" ON "PhoneModel"("brandId", "slug");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductGroup_slug_key" ON "ProductGroup"("slug");
+
+-- CreateIndex
+CREATE INDEX "ProductGroup_kind_status_published_idx" ON "ProductGroup"("kind", "status", "published");
+
+-- CreateIndex
+CREATE INDEX "ProductGroup_brandId_idx" ON "ProductGroup"("brandId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Product_sku_key" ON "Product"("sku");
@@ -791,16 +590,10 @@ CREATE INDEX "Product_kind_status_published_idx" ON "Product"("kind", "status", 
 CREATE INDEX "Product_categoryId_idx" ON "Product"("categoryId");
 
 -- CreateIndex
-CREATE INDEX "ProductImage_productId_position_idx" ON "ProductImage"("productId", "position");
+CREATE INDEX "Product_groupId_position_idx" ON "Product"("groupId", "position");
 
 -- CreateIndex
-CREATE INDEX "ProductCompatibility_brandId_idx" ON "ProductCompatibility"("brandId");
-
--- CreateIndex
-CREATE INDEX "ProductCompatibility_phoneModelId_idx" ON "ProductCompatibility"("phoneModelId");
-
--- CreateIndex
-CREATE INDEX "ProductCompatibility_productId_idx" ON "ProductCompatibility"("productId");
+CREATE INDEX "ProductImage_groupId_position_idx" ON "ProductImage"("groupId", "position");
 
 -- CreateIndex
 CREATE INDEX "InventoryMovement_productId_createdAt_idx" ON "InventoryMovement"("productId", "createdAt");
@@ -818,69 +611,6 @@ CREATE UNIQUE INDEX "Purchase_number_key" ON "Purchase"("number");
 CREATE INDEX "Purchase_status_purchaseDate_idx" ON "Purchase"("status", "purchaseDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UsedPhone_reference_key" ON "UsedPhone"("reference");
-
--- CreateIndex
-CREATE UNIQUE INDEX "UsedPhone_slug_key" ON "UsedPhone"("slug");
-
--- CreateIndex
-CREATE UNIQUE INDEX "UsedPhone_imeiHash_key" ON "UsedPhone"("imeiHash");
-
--- CreateIndex
-CREATE INDEX "UsedPhone_status_idx" ON "UsedPhone"("status");
-
--- CreateIndex
-CREATE INDEX "UsedPhone_brandId_idx" ON "UsedPhone"("brandId");
-
--- CreateIndex
-CREATE INDEX "UsedPhoneImage_usedPhoneId_position_idx" ON "UsedPhoneImage"("usedPhoneId", "position");
-
--- CreateIndex
-CREATE INDEX "UsedPhoneEvent_usedPhoneId_createdAt_idx" ON "UsedPhoneEvent"("usedPhoneId", "createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairType_name_key" ON "RepairType"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairType_slug_key" ON "RepairType"("slug");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairPrice_phoneModelId_repairTypeId_key" ON "RepairPrice"("phoneModelId", "repairTypeId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairRequest_reference_key" ON "RepairRequest"("reference");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairRequest_repairJobId_key" ON "RepairRequest"("repairJobId");
-
--- CreateIndex
-CREATE INDEX "RepairRequest_status_createdAt_idx" ON "RepairRequest"("status", "createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairJob_number_key" ON "RepairJob"("number");
-
--- CreateIndex
-CREATE INDEX "RepairJob_status_idx" ON "RepairJob"("status");
-
--- CreateIndex
-CREATE INDEX "RepairJob_completedAt_idx" ON "RepairJob"("completedAt");
-
--- CreateIndex
-CREATE INDEX "RepairJob_receivedAt_idx" ON "RepairJob"("receivedAt");
-
--- CreateIndex
-CREATE INDEX "RepairJob_customerId_idx" ON "RepairJob"("customerId");
-
--- CreateIndex
-CREATE INDEX "RepairPart_repairJobId_idx" ON "RepairPart"("repairJobId");
-
--- CreateIndex
-CREATE INDEX "RepairStatusHistory_repairJobId_createdAt_idx" ON "RepairStatusHistory"("repairJobId", "createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RepairQuote_repairJobId_version_key" ON "RepairQuote"("repairJobId", "version");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Order_number_key" ON "Order"("number");
 
 -- CreateIndex
@@ -896,9 +626,6 @@ CREATE INDEX "Order_completedAt_idx" ON "Order"("completedAt");
 CREATE INDEX "OrderItem_productId_idx" ON "OrderItem"("productId");
 
 -- CreateIndex
-CREATE INDEX "OrderItem_usedPhoneId_idx" ON "OrderItem"("usedPhoneId");
-
--- CreateIndex
 CREATE INDEX "OrderStatusHistory_orderId_createdAt_idx" ON "OrderStatusHistory"("orderId", "createdAt");
 
 -- CreateIndex
@@ -911,9 +638,6 @@ CREATE INDEX "Payment_status_confirmedAt_idx" ON "Payment"("status", "confirmedA
 CREATE INDEX "Payment_orderId_idx" ON "Payment"("orderId");
 
 -- CreateIndex
-CREATE INDEX "Payment_repairJobId_idx" ON "Payment"("repairJobId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Payment_provider_providerReference_key" ON "Payment"("provider", "providerReference");
 
 -- CreateIndex
@@ -923,7 +647,7 @@ CREATE UNIQUE INDEX "Expense_replacesId_key" ON "Expense"("replacesId");
 CREATE INDEX "Expense_status_expenseDate_idx" ON "Expense"("status", "expenseDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Review_repairJobId_key" ON "Review"("repairJobId");
+CREATE UNIQUE INDEX "Review_orderId_key" ON "Review"("orderId");
 
 -- CreateIndex
 CREATE INDEX "Review_status_createdAt_idx" ON "Review"("status", "createdAt");
@@ -932,7 +656,7 @@ CREATE INDEX "Review_status_createdAt_idx" ON "Review"("status", "createdAt");
 CREATE UNIQUE INDEX "ReviewVerificationToken_codeHash_key" ON "ReviewVerificationToken"("codeHash");
 
 -- CreateIndex
-CREATE INDEX "ReviewVerificationToken_repairJobId_idx" ON "ReviewVerificationToken"("repairJobId");
+CREATE INDEX "ReviewVerificationToken_orderId_idx" ON "ReviewVerificationToken"("orderId");
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -941,7 +665,13 @@ ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PhoneModel" ADD CONSTRAINT "PhoneModel_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProductGroup" ADD CONSTRAINT "ProductGroup_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductGroup" ADD CONSTRAINT "ProductGroup_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Product" ADD CONSTRAINT "Product_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ProductGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -950,16 +680,7 @@ ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("cat
 ALTER TABLE "Product" ADD CONSTRAINT "Product_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProductImage" ADD CONSTRAINT "ProductImage_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ProductCompatibility" ADD CONSTRAINT "ProductCompatibility_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ProductCompatibility" ADD CONSTRAINT "ProductCompatibility_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ProductCompatibility" ADD CONSTRAINT "ProductCompatibility_phoneModelId_fkey" FOREIGN KEY ("phoneModelId") REFERENCES "PhoneModel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ProductImage" ADD CONSTRAINT "ProductImage_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ProductGroup"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InventoryMovement" ADD CONSTRAINT "InventoryMovement_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -995,78 +716,6 @@ ALTER TABLE "PurchasePayment" ADD CONSTRAINT "PurchasePayment_purchaseId_fkey" F
 ALTER TABLE "PurchasePayment" ADD CONSTRAINT "PurchasePayment_recordedById_fkey" FOREIGN KEY ("recordedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UsedPhone" ADD CONSTRAINT "UsedPhone_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UsedPhone" ADD CONSTRAINT "UsedPhone_phoneModelId_fkey" FOREIGN KEY ("phoneModelId") REFERENCES "PhoneModel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UsedPhone" ADD CONSTRAINT "UsedPhone_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UsedPhoneImage" ADD CONSTRAINT "UsedPhoneImage_usedPhoneId_fkey" FOREIGN KEY ("usedPhoneId") REFERENCES "UsedPhone"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UsedPhoneEvent" ADD CONSTRAINT "UsedPhoneEvent_usedPhoneId_fkey" FOREIGN KEY ("usedPhoneId") REFERENCES "UsedPhone"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UsedPhoneEvent" ADD CONSTRAINT "UsedPhoneEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairPrice" ADD CONSTRAINT "RepairPrice_phoneModelId_fkey" FOREIGN KEY ("phoneModelId") REFERENCES "PhoneModel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairPrice" ADD CONSTRAINT "RepairPrice_repairTypeId_fkey" FOREIGN KEY ("repairTypeId") REFERENCES "RepairType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairRequest" ADD CONSTRAINT "RepairRequest_phoneModelId_fkey" FOREIGN KEY ("phoneModelId") REFERENCES "PhoneModel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairRequest" ADD CONSTRAINT "RepairRequest_repairTypeId_fkey" FOREIGN KEY ("repairTypeId") REFERENCES "RepairType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairRequest" ADD CONSTRAINT "RepairRequest_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairRequest" ADD CONSTRAINT "RepairRequest_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairJob" ADD CONSTRAINT "RepairJob_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairJob" ADD CONSTRAINT "RepairJob_phoneModelId_fkey" FOREIGN KEY ("phoneModelId") REFERENCES "PhoneModel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairJob" ADD CONSTRAINT "RepairJob_repairTypeId_fkey" FOREIGN KEY ("repairTypeId") REFERENCES "RepairType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairJob" ADD CONSTRAINT "RepairJob_technicianId_fkey" FOREIGN KEY ("technicianId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairJob" ADD CONSTRAINT "RepairJob_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairPart" ADD CONSTRAINT "RepairPart_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairPart" ADD CONSTRAINT "RepairPart_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairPart" ADD CONSTRAINT "RepairPart_addedById_fkey" FOREIGN KEY ("addedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairStatusHistory" ADD CONSTRAINT "RepairStatusHistory_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairStatusHistory" ADD CONSTRAINT "RepairStatusHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairQuote" ADD CONSTRAINT "RepairQuote_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RepairQuote" ADD CONSTRAINT "RepairQuote_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1076,10 +725,7 @@ ALTER TABLE "Order" ADD CONSTRAINT "Order_createdById_fkey" FOREIGN KEY ("create
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_usedPhoneId_fkey" FOREIGN KEY ("usedPhoneId") REFERENCES "UsedPhone"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderStatusHistory" ADD CONSTRAINT "OrderStatusHistory_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1094,10 +740,7 @@ ALTER TABLE "OrderReturn" ADD CONSTRAINT "OrderReturn_orderId_fkey" FOREIGN KEY 
 ALTER TABLE "OrderReturn" ADD CONSTRAINT "OrderReturn_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_recordedById_fkey" FOREIGN KEY ("recordedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1112,42 +755,37 @@ ALTER TABLE "Expense" ADD CONSTRAINT "Expense_replacesId_fkey" FOREIGN KEY ("rep
 ALTER TABLE "Expense" ADD CONSTRAINT "Expense_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Review" ADD CONSTRAINT "Review_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Review" ADD CONSTRAINT "Review_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Review" ADD CONSTRAINT "Review_moderatedById_fkey" FOREIGN KEY ("moderatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ReviewVerificationToken" ADD CONSTRAINT "ReviewVerificationToken_repairJobId_fkey" FOREIGN KEY ("repairJobId") REFERENCES "RepairJob"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ReviewVerificationToken" ADD CONSTRAINT "ReviewVerificationToken_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ReviewVerificationToken" ADD CONSTRAINT "ReviewVerificationToken_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
 
 -- ───────────────────────── Contraintes métier (garde-fous au niveau de la base)
 ALTER TABLE "Product" ADD CONSTRAINT "product_stock_non_negative" CHECK ("stockQuantity" >= 0);
 ALTER TABLE "Product" ADD CONSTRAINT "product_reserved_non_negative" CHECK ("reservedQuantity" >= 0);
 ALTER TABLE "Product" ADD CONSTRAINT "product_prices_non_negative" CHECK ("salePrice" >= 0 AND "averageCost" >= 0);
+-- Prix barré : uniquement s'il est supérieur au prix de vente.
+ALTER TABLE "Product" ADD CONSTRAINT "product_compare_at_price" CHECK ("compareAtPrice" IS NULL OR "compareAtPrice" > "salePrice");
+ALTER TABLE "Product" ADD CONSTRAINT "product_variant_values" CHECK (("ramGb" IS NULL OR "ramGb" > 0) AND ("storageGb" IS NULL OR "storageGb" > 0) AND ("colorHex" IS NULL OR "colorHex" ~ '^#[0-9A-Fa-f]{6}$'));
 ALTER TABLE "OrderItem" ADD CONSTRAINT "order_item_quantity_positive" CHECK ("quantity" > 0 AND "returnedQuantity" >= 0 AND "returnedQuantity" <= "quantity");
-ALTER TABLE "OrderItem" ADD CONSTRAINT "order_item_target" CHECK (("productId" IS NULL) <> ("usedPhoneId" IS NULL));
 ALTER TABLE "Payment" ADD CONSTRAINT "payment_amount_positive" CHECK ("amount" > 0);
-ALTER TABLE "Payment" ADD CONSTRAINT "payment_target" CHECK (("orderId" IS NULL) <> ("repairJobId" IS NULL));
 ALTER TABLE "PurchaseItem" ADD CONSTRAINT "purchase_item_values" CHECK ("quantity" > 0 AND "unitCost" >= 0);
 ALTER TABLE "PurchasePayment" ADD CONSTRAINT "purchase_payment_positive" CHECK ("amount" > 0);
-ALTER TABLE "RepairPart" ADD CONSTRAINT "repair_part_values" CHECK ("quantity" > 0 AND "unitCost" >= 0);
-ALTER TABLE "RepairJob" ADD CONSTRAINT "repair_amounts_non_negative" CHECK ("billedAmount" >= 0 AND "consumablesCost" >= 0 AND "otherDirectCosts" >= 0);
 ALTER TABLE "Expense" ADD CONSTRAINT "expense_amount_positive" CHECK ("amount" > 0);
-ALTER TABLE "UsedPhone" ADD CONSTRAINT "used_phone_prices" CHECK ("purchasePrice" >= 0 AND "salePrice" >= 0);
-ALTER TABLE "UsedPhone" ADD CONSTRAINT "used_phone_battery" CHECK ("batteryHealth" IS NULL OR ("batteryHealth" BETWEEN 0 AND 100));
 ALTER TABLE "Review" ADD CONSTRAINT "review_ratings_range" CHECK (
   "rating" BETWEEN 1 AND 5
-  AND ("ratingRepair" IS NULL OR "ratingRepair" BETWEEN 1 AND 5)
   AND ("ratingWelcome" IS NULL OR "ratingWelcome" BETWEEN 1 AND 5)
   AND ("ratingValue" IS NULL OR "ratingValue" BETWEEN 1 AND 5)
 );
 ALTER TABLE "OpeningHour" ADD CONSTRAINT "opening_hour_day" CHECK ("dayOfWeek" BETWEEN 1 AND 7);
 ALTER TABLE "BusinessSettings" ADD CONSTRAINT "settings_singleton" CHECK ("id" = 1);
 
--- Un même modèle ne peut figurer deux fois dans les compatibilités d'un produit,
--- et une compatibilité « marque entière » n'existe qu'une fois.
-CREATE UNIQUE INDEX "product_compat_model_unique" ON "ProductCompatibility" ("productId", "phoneModelId") WHERE "phoneModelId" IS NOT NULL;
-CREATE UNIQUE INDEX "product_compat_brand_unique" ON "ProductCompatibility" ("productId", "brandId") WHERE "phoneModelId" IS NULL;
+-- Une même configuration (couleur, RAM, stockage, état, option) n'existe qu'une fois par fiche.
+CREATE UNIQUE INDEX "product_variant_unique" ON "Product" ("groupId", "color", "ramGb", "storageGb", "condition", "optionValue") NULLS NOT DISTINCT;

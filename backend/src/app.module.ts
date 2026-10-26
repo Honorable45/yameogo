@@ -14,14 +14,12 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule, PrismaService } from './prisma/prisma.service';
 import { PurchasesModule } from './purchases/purchases.module';
-import { RepairsModule } from './repairs/repairs.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SearchModule } from './search/search.module';
 import { SettingsModule } from './settings/settings.controller';
 import { StatsModule } from './stats/stats.module';
 import { StorageModule } from './storage/storage.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
-import { UsedPhonesModule } from './used-phones/used-phones.module';
 import { UsersController } from './users/users.controller';
 
 @Controller('health')
@@ -53,10 +51,8 @@ class HealthController {
     CustomersModule,
     SuppliersModule,
     PurchasesModule,
-    UsedPhonesModule,
     PaymentsModule,
     OrdersModule,
-    RepairsModule,
     ExpensesModule,
     ReviewsModule,
     StatsModule,

@@ -14,8 +14,6 @@ import { Tx } from '../prisma/prisma.service';
  * Commande terminée            → sortie SALE depuis la réservation, coût figé au coût moyen.
  * Commande annulée             → libération de la réservation.
  * Vente au comptoir            → sortie SALE immédiate.
- * Pièce ajoutée à une réparation → sortie REPAIR_USE immédiate (la pièce quitte le stock à la pose).
- * Pièce retirée d'une réparation → entrée REPAIR_RETURN au coût figé initialement.
  * Approvisionnement validé     → entrée PURCHASE au coût de revient (prix + frais répartis).
  *
  * Valorisation : coût moyen pondéré, recalculé à chaque entrée valorisée.
@@ -37,7 +35,6 @@ export interface MovementRefs {
   userId?: string | null;
   purchaseItemId?: string;
   orderItemId?: string;
-  repairPartId?: string;
   orderReturnId?: string;
   countLineId?: string;
 }
@@ -81,7 +78,7 @@ export class StockService {
    */
   async issue(
     tx: Tx,
-    input: { productId: string; quantity: number; type: Extract<MovementType, 'SALE' | 'REPAIR_USE'>; fromReservation?: boolean } & MovementRefs,
+    input: { productId: string; quantity: number; type: Extract<MovementType, 'SALE'>; fromReservation?: boolean } & MovementRefs,
   ): Promise<number> {
     const p = await this.lock(tx, input.productId);
     if (input.fromReservation) {
@@ -109,7 +106,7 @@ export class StockService {
       productId: string;
       quantity: number;
       unitCost: number;
-      type: Extract<MovementType, 'PURCHASE' | 'SALE_RETURN' | 'REPAIR_RETURN' | 'INITIAL'>;
+      type: Extract<MovementType, 'PURCHASE' | 'SALE_RETURN' | 'INITIAL' | 'ADJUSTMENT'>;
     } & MovementRefs,
   ) {
     const p = await this.lock(tx, input.productId);
@@ -165,7 +162,6 @@ export class StockService {
         userId: refs.userId ?? null,
         purchaseItemId: refs.purchaseItemId,
         orderItemId: refs.orderItemId,
-        repairPartId: refs.repairPartId,
         orderReturnId: refs.orderReturnId,
         countLineId: refs.countLineId,
       },

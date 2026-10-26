@@ -38,7 +38,6 @@ class SettingsDto {
   @IsOptional() @IsString() @MaxLength(60) shopName?: string;
   @IsOptional() @IsString() @MaxLength(160) tagline?: string | null;
   @IsOptional() @IsString() @MaxLength(160) heroImageAlt?: string | null;
-  @IsOptional() @IsString() @MaxLength(160) repairImageAlt?: string | null;
   @IsOptional() @IsString() @MaxLength(160) phonesImageAlt?: string | null;
   @IsOptional() @IsString() @MaxLength(160) shopImageAlt?: string | null;
   @IsOptional() @IsUrl({ protocols: ['https'], require_protocol: true }, { message: 'Lien TikTok invalide (https://…).' }) @MaxLength(300) tiktokUrl?: string | null;
@@ -61,10 +60,10 @@ class SettingsDto {
   @IsOptional() @IsString() @MaxLength(80) taxId?: string | null;
   @IsOptional() @IsString() @MaxLength(120) publicationDirector?: string | null;
   @IsOptional() @IsString() @MaxLength(300) hostingProvider?: string | null;
-  @IsOptional() @IsString() @MaxLength(600) repairWarrantyText?: string | null;
   @IsOptional() @IsBoolean() deliveryEnabled?: boolean;
   @IsOptional() @IsInt() @Min(0) @Max(1_000_000) deliveryFee?: number;
   @IsOptional() @IsString() @MaxLength(300) deliveryArea?: string | null;
+  @IsOptional() @IsString() @MaxLength(1000) deliveryInfo?: string | null;
   @IsOptional() @IsBoolean() cashOnDeliveryEnabled?: boolean;
   @IsOptional() @IsBoolean() payInStoreEnabled?: boolean;
   @IsOptional() @IsBoolean() mobileMoneyEnabled?: boolean;
@@ -86,8 +85,8 @@ class OpeningHoursDto {
 }
 
 class ImageKindDto {
-  @IsIn(['logo', 'hero', 'repair', 'phones', 'shop'])
-  kind: 'logo' | 'hero' | 'repair' | 'phones' | 'shop';
+  @IsIn(['logo', 'hero', 'phones', 'shop'])
+  kind: 'logo' | 'hero' | 'phones' | 'shop';
 }
 
 export async function getSettings(prisma: PrismaService) {
@@ -121,8 +120,6 @@ export class SettingsController {
       logoUrl: s.logoUrl,
       heroImageUrl: s.heroImageUrl,
       heroImageAlt: s.heroImageAlt,
-      repairImageUrl: s.repairImageUrl,
-      repairImageAlt: s.repairImageAlt,
       phonesImageUrl: s.phonesImageUrl,
       phonesImageAlt: s.phonesImageAlt,
       shopImageUrl: s.shopImageUrl,
@@ -144,7 +141,7 @@ export class SettingsController {
         publicationDirector: s.publicationDirector,
         hostingProvider: s.hostingProvider,
       },
-      repairWarrantyText: s.repairWarrantyText,
+      deliveryInfo: s.deliveryInfo,
       openingHours: hours,
       checkout: {
         deliveryEnabled: s.deliveryEnabled,
@@ -214,9 +211,9 @@ export class SettingsController {
     const url = this.storage.publicUrl(stored.key);
     const settings = await this.prisma.businessSettings.update({
       where: { id: 1 },
-      data: { logo: { logoUrl: url }, hero: { heroImageUrl: url }, repair: { repairImageUrl: url }, phones: { phonesImageUrl: url }, shop: { shopImageUrl: url } }[dto.kind],
+      data: { logo: { logoUrl: url }, hero: { heroImageUrl: url }, phones: { phonesImageUrl: url }, shop: { shopImageUrl: url } }[dto.kind],
     });
-    await this.audit.log({ userId: me.id, action: 'settings.image', entity: 'BusinessSettings', entityId: '1', summary: { logo: 'Logo remplacé', hero: "Photo d'accueil remplacée", repair: 'Photo « réparation » remplacée', phones: 'Photo « téléphones » remplacée', shop: 'Photo de la boutique remplacée' }[dto.kind] });
+    await this.audit.log({ userId: me.id, action: 'settings.image', entity: 'BusinessSettings', entityId: '1', summary: { logo: 'Logo remplacé', hero: "Photo d'accueil remplacée", phones: 'Photo « téléphones » remplacée', shop: 'Photo de la boutique remplacée' }[dto.kind] });
     return settings;
   }
 }

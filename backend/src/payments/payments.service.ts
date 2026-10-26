@@ -4,7 +4,7 @@ import { AuditService } from '../common/audit.service';
 import { settlementStatus } from '../common/money';
 import { PrismaService, Tx } from '../prisma/prisma.service';
 
-export type PaymentTarget = { orderId: string; repairJobId?: undefined } | { repairJobId: string; orderId?: undefined };
+export type PaymentTarget = { orderId: string };
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
   CASH: 'Espèces',
@@ -16,7 +16,7 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 /**
- * Paiements et remboursements des commandes et des réparations.
+ * Paiements et remboursements des ventes.
  *
  * - Seuls les paiements CONFIRMED comptent dans les encaissements.
  * - Un paiement saisi par l'équipe (espèces, TMoney/Flooz reçu sur le téléphone de la boutique…)
@@ -33,20 +33,14 @@ export class PaymentsService {
 
   /** Verrouille la cible et renvoie le montant dû, l'encaissé net et un libellé. */
   private async lockTarget(tx: Tx, target: PaymentTarget) {
-    if (target.orderId) {
-      const [row] = await tx.$queryRaw<{ total: number; status: string; number: string }[]>`
-        SELECT "total", "status", "number" FROM "Order" WHERE "id" = ${target.orderId} FOR UPDATE`;
-      if (!row) throw new NotFoundException('Commande introuvable.');
-      return { due: row.total, cancelled: row.status === 'CANCELLED', label: `commande ${row.number}` };
-    }
-    const [row] = await tx.$queryRaw<{ billedAmount: number; status: string; number: string }[]>`
-      SELECT "billedAmount", "status", "number" FROM "RepairJob" WHERE "id" = ${target.repairJobId} FOR UPDATE`;
-    if (!row) throw new NotFoundException('Réparation introuvable.');
-    return { due: row.billedAmount, cancelled: row.status === 'CANCELLED', label: `réparation ${row.number}` };
+    const [row] = await tx.$queryRaw<{ total: number; status: string; number: string }[]>`
+      SELECT "total", "status", "number" FROM "Order" WHERE "id" = ${target.orderId} FOR UPDATE`;
+    if (!row) throw new NotFoundException('Commande introuvable.');
+    return { due: row.total, cancelled: row.status === 'CANCELLED', label: `commande ${row.number}` };
   }
 
   private where(target: PaymentTarget) {
-    return target.orderId ? { orderId: target.orderId } : { repairJobId: target.repairJobId };
+    return { orderId: target.orderId };
   }
 
   /** Encaissé net confirmé (paiements − remboursements). */
@@ -64,16 +58,8 @@ export class PaymentsService {
   /** Recalcule le montant payé et le statut de règlement dénormalisés sur la cible. */
   async refreshTotals(tx: Tx, target: PaymentTarget) {
     const paid = await this.netPaid(tx, target);
-    if (target.orderId) {
-      const order = await tx.order.findUniqueOrThrow({ where: { id: target.orderId }, select: { total: true } });
-      await tx.order.update({ where: { id: target.orderId }, data: { amountPaid: paid, paymentStatus: settlementStatus(order.total, paid) } });
-    } else {
-      const job = await tx.repairJob.findUniqueOrThrow({ where: { id: target.repairJobId }, select: { billedAmount: true } });
-      await tx.repairJob.update({
-        where: { id: target.repairJobId },
-        data: { amountPaid: paid, paymentStatus: settlementStatus(job.billedAmount, paid) },
-      });
-    }
+    const order = await tx.order.findUniqueOrThrow({ where: { id: target.orderId }, select: { total: true } });
+    await tx.order.update({ where: { id: target.orderId }, data: { amountPaid: paid, paymentStatus: settlementStatus(order.total, paid) } });
     return paid;
   }
 
@@ -140,7 +126,7 @@ export class PaymentsService {
     return this.prisma.run(async (tx) => {
       const payment = await tx.payment.findUnique({ where: { id: paymentId } });
       if (!payment) throw new NotFoundException('Paiement introuvable.');
-      const target: PaymentTarget = payment.orderId ? { orderId: payment.orderId } : { repairJobId: payment.repairJobId! };
+      const target: PaymentTarget = { orderId: payment.orderId };
       await this.lockTarget(tx, target);
       if (payment.status === 'CANCELLED') throw new ConflictException('Cette écriture est déjà annulée.');
       if (payment.provider !== 'MANUAL' && payment.status === 'CONFIRMED') {

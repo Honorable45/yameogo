@@ -27,13 +27,11 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { OnlinePaymentsService } from '../payments/online-payments.service';
 import { PaymentsModule } from '../payments/payments.module';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsedPhonesModule } from '../used-phones/used-phones.module';
 import { allowedOrderTransitions, ORDER_STATUS_LABELS } from './order-rules';
 import { OrderDetail, OrdersService } from './orders.service';
 
 class CartItemDto {
-  @IsOptional() @IsString() productId?: string;
-  @IsOptional() @IsString() usedPhoneId?: string;
+  @IsString() productId: string;
   @IsInt() @Min(1) @Max(50) quantity: number;
 }
 
@@ -238,7 +236,7 @@ export class OrdersController {
 }
 
 @Module({
-  imports: [InventoryModule, UsedPhonesModule, PaymentsModule, CustomersModule],
+  imports: [InventoryModule, PaymentsModule, CustomersModule],
   controllers: [PublicOrdersController, OrdersController],
   providers: [OrdersService],
 })

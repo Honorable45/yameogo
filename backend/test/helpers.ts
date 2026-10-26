@@ -20,8 +20,8 @@ export async function resetDatabase(prisma: PrismaClient) {
 export interface Fixture {
   app: NestExpressApplication;
   prisma: PrismaClient;
-  agents: Record<'manager' | 'technician' | 'seller', ReturnType<typeof request.agent>>;
-  ids: { brand: string; model: string; type: string; accCategory: string; partCategory: string; technician: string };
+  agents: Record<'manager' | 'seller', ReturnType<typeof request.agent>>;
+  ids: { brand: string; phoneCategory: string; accCategory: string };
 }
 
 export async function createFixture(): Promise<Fixture> {
@@ -31,17 +31,13 @@ export async function createFixture(): Promise<Fixture> {
   const passwordHash = await hash(PASSWORD, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
   const users: [string, Role][] = [
     ['manager@test.local', 'MANAGER'],
-    ['tech@test.local', 'TECHNICIAN'],
     ['seller@test.local', 'SELLER'],
   ];
   for (const [email, role] of users) await prisma.user.create({ data: { email, name: role, role, passwordHash } });
-  const technician = await prisma.user.findUniqueOrThrow({ where: { email: 'tech@test.local' } });
 
-  const brand = await prisma.brand.create({ data: { name: 'Apple', slug: 'apple' } });
-  const model = await prisma.phoneModel.create({ data: { brandId: brand.id, name: 'iPhone 11', slug: 'iphone-11' } });
-  const type = await prisma.repairType.create({ data: { name: 'Écran cassé', slug: 'ecran-casse' } });
-  const accCategory = await prisma.category.create({ data: { name: 'Câbles', slug: 'cables', kind: 'ACCESSORY' } });
-  const partCategory = await prisma.category.create({ data: { name: 'Écrans', slug: 'pieces-ecrans', kind: 'PART' } });
+  const brand = await prisma.brand.create({ data: { name: 'Samsung', slug: 'samsung' } });
+  const phoneCategory = await prisma.category.create({ data: { name: 'Smartphones', slug: 'smartphones', kind: 'PHONE' } });
+  const accCategory = await prisma.category.create({ data: { name: 'Câbles USB', slug: 'cables-usb', kind: 'ACCESSORY' } });
   await prisma.businessSettings.create({ data: { id: 1, payInStoreEnabled: true } });
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -56,27 +52,21 @@ export async function createFixture(): Promise<Fixture> {
   };
   const agents = {
     manager: await login('manager@test.local'),
-    technician: await login('tech@test.local'),
     seller: await login('seller@test.local'),
   };
-  return { app, prisma, agents, ids: { brand: brand.id, model: model.id, type: type.id, accCategory: accCategory.id, partCategory: partCategory.id, technician: technician.id } };
+  return { app, prisma, agents, ids: { brand: brand.id, phoneCategory: phoneCategory.id, accCategory: accCategory.id } };
 }
 
 /** En-tête anti-CSRF exigé sur toute requête modifiante authentifiée. */
 export const CSRF = { 'X-Requested-With': 'yameogo' };
 
-export async function createProduct(f: Fixture, data: { name: string; price: number; stock: number; cost: number; kind?: 'ACCESSORY' | 'PART' }) {
+/** Accessoire à configuration unique ; renvoie l'article (la variante) créé. */
+export async function createProduct(f: Fixture, data: { name: string; price: number; stock: number; cost: number }) {
   const res = await f.agents.manager
-    .post('/products')
+    .post('/catalog-groups')
     .set(CSRF)
-    .send({
-      kind: data.kind ?? 'ACCESSORY',
-      name: data.name,
-      categoryId: data.kind === 'PART' ? f.ids.partCategory : f.ids.accCategory,
-      salePrice: data.price,
-      initialStock: data.stock,
-      initialUnitCost: data.cost,
-    })
+    .send({ kind: 'ACCESSORY', name: data.name, categoryId: f.ids.accCategory, variants: [{ salePrice: data.price, stock: data.stock, unitCost: data.cost }] })
     .expect(201);
-  return res.body as { id: string; sku: string };
+  const variant = res.body.variants[0] as { id: string; sku: string };
+  return { id: variant.id, sku: variant.sku, groupId: res.body.id as string };
 }

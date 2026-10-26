@@ -78,131 +78,130 @@ describe('Commandes et stock', () => {
     const order = await f.prisma.order.findUniqueOrThrow({ where: { number: res.body.number } });
     await f.agents.seller.post(`/orders/${order.id}/payments`).set(CSRF).send({ kind: 'PAYMENT', amount: 6000, method: 'CASH' }).expect(400);
   });
-
-  it('vend un téléphone d’occasion comme exemplaire unique et en garde la marge', async () => {
-    const phone = await f.agents.manager
-      .post('/used-phones')
-      .set(CSRF)
-      .send({ brandId: f.ids.brand, phoneModelId: f.ids.model, modelName: 'iPhone 11', condition: 'IMPORTED', storageGb: 128, color: 'Blanc', grade: 'GOOD', purchasePrice: 100000, salePrice: 150000, acquiredAt: new Date().toISOString(), imei: '356938035643809' })
-      .expect(201);
-    await f.prisma.usedPhoneImage.create({ data: { usedPhoneId: phone.body.id, url: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a' } });
-    await f.agents.manager.post(`/used-phones/${phone.body.id}/status`).set(CSRF).send({ status: 'AVAILABLE' }).expect(200);
-
-    // Doublon d'IMEI refusé.
-    await f.agents.manager
-      .post('/used-phones')
-      .set(CSRF)
-      .send({ brandId: f.ids.brand, modelName: 'iPhone 11', grade: 'GOOD', purchasePrice: 1, salePrice: 2, acquiredAt: new Date().toISOString(), imei: '35-693803-564380-9', confirmDuplicate: true })
-      .expect(409);
-
-    // L'IMEI et le prix d'achat ne sont jamais publics.
-    const pub = await request(f.app.getHttpServer()).get('/shop/phones').expect(200);
-    expect(JSON.stringify(pub.body)).not.toMatch(/imei|purchasePrice|356938/i);
-    // Catégorie « Venu » exposée et filtrable.
-    expect(pub.body[0]).toMatchObject({ condition: 'IMPORTED', conditionLabel: 'Venu' });
-    expect((await request(f.app.getHttpServer()).get('/shop/phones?condition=NEW').expect(200)).body).toHaveLength(0);
-
-    const sale = await f.agents.seller.post('/orders/counter-sale').set(CSRF).send({ items: [{ usedPhoneId: phone.body.id, quantity: 1 }], payments: [{ method: 'CASH', amount: 150000 }] }).expect(201);
-    expect(sale.body.status).toBe('COMPLETED');
-    const again = await f.agents.seller.post('/orders/counter-sale').set(CSRF).send({ items: [{ usedPhoneId: phone.body.id, quantity: 1 }], payments: [] });
-    expect(again.status).toBe(409);
-
-    const detail = await f.agents.manager.get(`/used-phones/${phone.body.id}`).expect(200);
-    expect(detail.body.status).toBe('SOLD');
-    expect(detail.body.sales[0].grossMargin).toBe(50000);
-  });
 });
 
-describe('Réparations', () => {
-  it('calcule coûts et marge, consomme et restitue le stock, conserve l’historique', async () => {
-    const part = await createProduct(f, { name: 'Écran iPhone 11', price: 0, stock: 2, cost: 6000, kind: 'PART' });
-    const created = await f.agents.technician
-      .post('/repairs')
+const PHONE = {
+  kind: 'PHONE',
+  name: 'Galaxy A56',
+  brandName: 'Samsung',
+  specs: [{ label: 'Écran', value: '6,7 pouces' }],
+  variants: [
+    { color: 'Noir', colorHex: '#111111', ramGb: 8, storageGb: 128, condition: 'NEW', salePrice: 150000, stock: 3, unitCost: 120000 },
+    { color: 'Noir', colorHex: '#111111', ramGb: 8, storageGb: 256, condition: 'NEW', salePrice: 165000, stock: 2, unitCost: 130000 },
+    { color: 'Bleu', colorHex: '#2f4a73', ramGb: 12, storageGb: 256, condition: 'NEW', salePrice: 185000, compareAtPrice: 199000, stock: 0 },
+  ],
+};
+
+describe('Catalogue et variantes', () => {
+  it('crée un smartphone avec ses configurations, chacune avec son prix et son stock', async () => {
+    const created = await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...PHONE, categoryId: f.ids.phoneCategory }).expect(201);
+    expect(created.body.variants.map((v: { label: string; salePrice: number; stockQuantity: number }) => [v.label, v.salePrice, v.stockQuantity])).toEqual([
+      ['Noir · 8 Go / 128 Go · Neuf', 150000, 3],
+      ['Noir · 8 Go / 256 Go · Neuf', 165000, 2],
+      ['Bleu · 12 Go / 256 Go · Neuf', 185000, 0],
+    ]);
+    // Stock initial tracé et valorisé : sert au coût moyen et aux marges.
+    const movement = await f.prisma.inventoryMovement.findFirstOrThrow({ where: { productId: created.body.variants[0].id } });
+    expect(movement).toMatchObject({ type: 'INITIAL', quantity: 3, unitCost: 120000 });
+
+    const pub = await request(f.app.getHttpServer()).get(`/shop/catalog/${created.body.slug}`).expect(200);
+    expect(pub.body).toMatchObject({ brand: { name: 'Samsung' }, priceFrom: 150000, ramGbs: [8, 12], storageGbs: [128, 256], specs: [{ label: 'Écran', value: '6,7 pouces' }] });
+    expect(pub.body.variants[2]).toMatchObject({ availability: 'OUT_OF_STOCK', price: 185000, compareAtPrice: 199000 });
+    expect(JSON.stringify(pub.body)).not.toMatch(/averageCost|unitCost|stockQuantity/);
+  });
+
+  it('refuse les configurations en double, les prix barrés incohérents et une marque manquante', async () => {
+    const base = { ...PHONE, name: 'Doublon', categoryId: f.ids.phoneCategory };
+    await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...base, variants: [PHONE.variants[0], { ...PHONE.variants[0], color: 'noir' }] }).expect(400);
+    await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...base, variants: [{ ...PHONE.variants[0], compareAtPrice: 150000 }] }).expect(400);
+    await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...base, brandName: null }).expect(400);
+    // Un accessoire n'a ni RAM, ni stockage, ni état : ces valeurs sont ignorées.
+    const acc = await f.agents.manager
+      .post('/catalog-groups')
       .set(CSRF)
-      .send({ customerName: 'Ama', customerPhone: '90000002', brandName: 'Apple', phoneModelId: f.ids.model, modelName: 'iPhone 11', repairTypeId: f.ids.type, reportedIssue: 'Écran cassé', imei: '356938035643809' })
+      .send({ kind: 'ACCESSORY', name: 'Câble tressé', categoryId: f.ids.accCategory, optionName: 'Longueur', variants: [{ optionValue: '1 m', ramGb: 8, storageGb: 64, condition: 'NEW', salePrice: 3000 }, { optionValue: '2 m', salePrice: 4000 }] })
       .expect(201);
-    const id = created.body.id;
-    expect(created.body.imeiEncrypted).toBeUndefined();
-
-    await f.agents.technician.post(`/repairs/${id}/quotes`).set(CSRF).send({ amount: 15000, details: 'Remplacement écran' }).expect(201);
-    const job = await f.prisma.repairJob.findUniqueOrThrow({ where: { id }, include: { quotes: true } });
-    // Décision du client via le suivi public (numéro + code).
-    await request(f.app.getHttpServer()).post(`/track/${job.number}/quotes/${job.quotes[0].id}/decision`).send({ code: 'WRONGCODE', accept: true }).expect(404);
-    const decided = await request(f.app.getHttpServer()).post(`/track/${job.number}/quotes/${job.quotes[0].id}/decision`).send({ code: job.trackingCode, accept: true }).expect(200);
-    expect(decided.body.billedAmount).toBe(15000);
-
-    await f.agents.technician.post(`/repairs/${id}/status`).set(CSRF).send({ status: 'IN_PROGRESS' }).expect(200);
-    await f.agents.technician.post(`/repairs/${id}/parts`).set(CSRF).send({ source: 'STOCK', productId: part.id, quantity: 1 }).expect(201);
-    expect((await product(part.id)).stockQuantity).toBe(1);
-
-    // Une deuxième pièce ajoutée par erreur puis retirée : remise en stock, plus comptée.
-    const withTwo = await f.agents.technician.post(`/repairs/${id}/parts`).set(CSRF).send({ source: 'STOCK', productId: part.id, quantity: 1 }).expect(201);
-    expect((await product(part.id)).stockQuantity).toBe(0);
-    await f.agents.technician.post(`/repairs/${id}/parts/${withTwo.body.parts[1].id}/return`).set(CSRF).send({ note: 'Erreur de saisie' }).expect(200);
-    expect((await product(part.id)).stockQuantity).toBe(1);
-
-    await f.agents.technician.patch(`/repairs/${id}`).set(CSRF).send({ consumablesCost: 500, otherDirectCosts: 500 }).expect(200);
-
-    // Le réparateur ne voit ni le coût des pièces du stock ni la marge.
-    const techView = await f.agents.technician.get(`/repairs/${id}`).expect(200);
-    expect(techView.body.financials).toBeNull();
-    expect(techView.body.parts[0].unitCost).toBeNull();
-
-    await f.agents.technician.post(`/repairs/${id}/status`).set(CSRF).send({ status: 'COMPLETED' }).expect(200);
-    const managerView = await f.agents.manager.get(`/repairs/${id}`).expect(200);
-    expect(managerView.body.financials).toMatchObject({ billedAmount: 15000, partsCost: 6000, directCosts: 7000, grossMargin: 8000 });
-    expect(managerView.body.paymentStatus).toBe('UNPAID');
-    expect(managerView.body.history.length).toBeGreaterThan(6);
+    expect(acc.body.variants[0]).toMatchObject({ ramGb: null, storageGb: null, condition: null, label: '1 m' });
   });
 
-  it('n’autorise pas l’annulation d’un dossier encaissé sans remboursement', async () => {
-    const created = await f.agents.technician.post('/repairs').set(CSRF).send({ customerPhone: '90000003', brandName: 'Tecno', modelName: 'Spark 10', reportedIssue: 'Ne charge plus', billedAmount: 5000 }).expect(201);
-    await f.agents.seller.post(`/repairs/${created.body.id}/payments`).set(CSRF).send({ kind: 'PAYMENT', amount: 2000, method: 'TMONEY', externalReference: 'TX1' }).expect(201);
-    await f.agents.technician.post(`/repairs/${created.body.id}/status`).set(CSRF).send({ status: 'CANCELLED', note: 'Refus du client' }).expect(409);
+  it('répercute prix et stock sur le site ; archive une configuration déjà vendue au lieu de la supprimer', async () => {
+    const created = await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...PHONE, name: 'Galaxy A36', categoryId: f.ids.phoneCategory }).expect(201);
+    const [v1, v2, v3] = created.body.variants;
+    await f.agents.seller.post('/orders/counter-sale').set(CSRF).send({ items: [{ productId: v2.id, quantity: 1 }], payments: [{ method: 'CASH', amount: 165000 }] }).expect(201);
+
+    const body = (variants: object[]) => ({ ...PHONE, name: 'Galaxy A36', categoryId: f.ids.phoneCategory, variants });
+    // Première entrée de stock sans coût connu : refusée.
+    await f.agents.manager.put(`/catalog-groups/${created.body.id}`).set(CSRF).send(body([{ ...PHONE.variants[0], id: v1.id }, { ...PHONE.variants[1], id: v2.id, stock: 1 }, { ...PHONE.variants[2], id: v3.id, stock: 2 }])).expect(400);
+    const updated = await f.agents.manager
+      .put(`/catalog-groups/${created.body.id}`)
+      .set(CSRF)
+      // Nouveau prix sur la 1re configuration, stock ajouté sur la 3e, 2e (vendue) retirée de la liste.
+      .send(body([{ ...PHONE.variants[0], id: v1.id, salePrice: 140000, stock: 3 }, { ...PHONE.variants[2], id: v3.id, stock: 2, unitCost: 150000 }]))
+      .expect(200);
+    const byId = Object.fromEntries(updated.body.variants.map((v: { id: string }) => [v.id, v]));
+    expect(byId[v1.id]).toMatchObject({ salePrice: 140000, active: true });
+    expect(byId[v2.id]).toMatchObject({ active: false });
+    expect(byId[v3.id]).toMatchObject({ stockQuantity: 2, availability: 'LOW_STOCK' });
+
+    const pub = await request(f.app.getHttpServer()).get(`/shop/catalog/${created.body.slug}`).expect(200);
+    expect(pub.body.variants.map((v: { id: string }) => v.id)).toEqual([v1.id, v3.id]);
+    expect(pub.body.priceFrom).toBe(140000);
+    // Une fiche déjà vendue ne peut pas être supprimée : elle s'archive.
+    await f.agents.manager.delete(`/catalog-groups/${created.body.id}`).set(CSRF).expect(409);
   });
 
-  it('n’invente jamais de tarif : estimation nulle sans tarif configuré', async () => {
-    const res = await request(f.app.getHttpServer()).get(`/repair-catalog/estimate?modelId=${f.ids.model}&typeId=${f.ids.type}`).expect(200);
-    expect(res.body.estimate).toBeNull();
-    await f.agents.manager.put('/repair-pricing/prices').set(CSRF).send({ phoneModelId: f.ids.model, repairTypeId: f.ids.type, partsPrice: 20000, laborPrice: 8000 }).expect(200);
-    const priced = await request(f.app.getHttpServer()).get(`/repair-catalog/estimate?modelId=${f.ids.model}&typeId=${f.ids.type}`).expect(200);
-    expect(priced.body.estimate.totalPrice).toBe(28000);
+  it('vérifie le panier avec les prix et stocks du serveur, et filtre le catalogue', async () => {
+    const created = await f.agents.manager.post('/catalog-groups').set(CSRF).send({ ...PHONE, name: 'Galaxy A26', categoryId: f.ids.phoneCategory }).expect(201);
+    const [v1, , v3] = created.body.variants;
+    const server = request(f.app.getHttpServer());
+    const cart = await server.post('/shop/cart/check').send({ items: [{ variantId: v1.id, quantity: 2 }, { variantId: v3.id, quantity: 1 }, { variantId: 'inconnu', quantity: 1 }] }).expect(200);
+    expect(cart.body.lines[0]).toMatchObject({ available: true, unitPrice: 150000, name: 'Galaxy A26', label: 'Noir · 8 Go / 128 Go · Neuf', issue: null });
+    expect(cart.body.lines[1]).toMatchObject({ available: false, issue: 'Épuisé' });
+    expect(cart.body.lines[2]).toMatchObject({ available: false });
+
+    const ram12 = await server.get('/shop/catalog?kind=PHONE&ram=12&q=A26').expect(200);
+    expect(ram12.body.items.map((g: { name: string }) => g.name)).toEqual(['Galaxy A26']);
+    const promo = await server.get('/shop/catalog?kind=PHONE&promo=1&q=A26&available=1').expect(200);
+    // La seule configuration en promotion est épuisée : la fiche n'est pas proposée en promotion disponible…
+    expect(promo.body.items[0]?.onSale ?? false).toBe(false);
+    const facets = await server.get('/shop/catalog-facets?kind=PHONE').expect(200);
+    expect(facets.body.rams).toEqual(expect.arrayContaining([8, 12]));
   });
 });
 
 describe('Avis clients', () => {
-  it('exige un code, attend la fin de la réparation et publie aussitôt', async () => {
+  it('exige un code, attend la remise de la commande et publie aussitôt', async () => {
     const server = request(f.app.getHttpServer());
-    const created = await f.agents.technician.post('/repairs').set(CSRF).send({ customerPhone: '90000004', brandName: 'Apple', modelName: 'iPhone 8', reportedIssue: 'Batterie', billedAmount: 10000 }).expect(201);
-    const id = created.body.id;
+    const p = await createProduct(f, { name: 'Coque avis', price: 4000, stock: 3, cost: 1500 });
+    const res = await checkout([{ productId: p.id, quantity: 1 }]).expect(201);
+    const order = await f.prisma.order.findUniqueOrThrow({ where: { number: res.body.number } });
 
     // Sans code : refusé.
     await server.post('/reviews').send({ rating: 5, comment: 'Super' }).expect(400);
 
-    // Code créé automatiquement, stable d'un affichage à l'autre, utilisable seulement après la réparation.
-    const code = (await f.agents.technician.get(`/review-codes/reparation/${id}`).expect(200)).body;
+    // Code créé automatiquement, stable d'un affichage à l'autre, utilisable seulement après la remise.
+    const code = (await f.agents.seller.get(`/review-codes/vente/${order.id}`).expect(200)).body;
     expect(code).toMatchObject({ usable: false, review: null });
-    expect((await f.agents.technician.get(`/review-codes/reparation/${id}`).expect(200)).body.code).toBe(code.code);
+    expect((await f.agents.seller.get(`/review-codes/vente/${order.id}`).expect(200)).body.code).toBe(code.code);
     const early = await server.post('/reviews').send({ rating: 5, code: code.code }).expect(400);
-    expect(early.body.message).toContain('pas encore terminée');
+    expect(early.body.message).toContain('pas encore remise');
 
-    await f.agents.technician.post(`/repairs/${id}/status`).set(CSRF).send({ status: 'IN_PROGRESS' }).expect(200);
-    await f.agents.technician.post(`/repairs/${id}/status`).set(CSRF).send({ status: 'COMPLETED' }).expect(200);
-    expect((await server.get(`/reviews/check-code?code=${code.code}`).expect(200)).body).toMatchObject({ serviceType: 'REPAIR', subject: 'Réparation de votre Apple iPhone 8' });
+    await f.agents.seller.post(`/orders/${order.id}/status`).set(CSRF).send({ status: 'CONFIRMED' }).expect(200);
+    await f.agents.seller.post(`/orders/${order.id}/status`).set(CSRF).send({ status: 'COMPLETED' }).expect(200);
+    expect((await server.get(`/reviews/check-code?code=${code.code}`).expect(200)).body).toMatchObject({ serviceType: 'ACCESSORY_PURCHASE', subject: 'Achat : Coque avis' });
 
     await server.post('/reviews').send({ rating: 4, comment: 'Rapide', code: code.code }).expect(201);
     // Publié immédiatement, sans modération, sans donnée personnelle.
     const pub = await server.get('/reviews/public').expect(200);
-    expect(pub.body.items[0]).toMatchObject({ verified: true, comment: 'Rapide', serviceType: 'REPAIR' });
-    expect(JSON.stringify(pub.body)).not.toContain('90000004');
+    expect(pub.body.items[0]).toMatchObject({ verified: true, comment: 'Rapide', serviceType: 'ACCESSORY_PURCHASE' });
+    expect(JSON.stringify(pub.body)).not.toContain('90000001');
 
     // Code à usage unique ; plus de nouveau code une fois l'avis donné.
     await server.post('/reviews').send({ rating: 1, code: code.code }).expect(400);
-    await f.agents.technician.post(`/review-codes/reparation/${id}/regenerate`).set(CSRF).expect(409);
-    expect((await f.agents.technician.get(`/review-codes/reparation/${id}`).expect(200)).body).toMatchObject({ code: null, review: { rating: 4 } });
+    await f.agents.seller.post(`/review-codes/vente/${order.id}/regenerate`).set(CSRF).expect(409);
 
     // La boutique peut masquer un avis abusif.
-    const review = await f.prisma.review.findFirstOrThrow({ where: { repairJobId: id } });
+    const review = await f.prisma.review.findFirstOrThrow({ where: { orderId: order.id } });
     await f.agents.manager.post(`/reviews/${review.id}/moderate`).set(CSRF).send({ status: 'HIDDEN' }).expect(200);
     expect((await server.get('/reviews/public').expect(200)).body.total).toBe(0);
   });
@@ -216,9 +215,9 @@ describe('Avis clients', () => {
     const second = (await f.agents.seller.post(`/review-codes/vente/${sale.body.id}/regenerate`).set(CSRF).expect(200)).body;
     expect(second.code).not.toBe(first.code);
     await server.post('/reviews').send({ rating: 5, code: first.code }).expect(400);
-    await server.post('/reviews').send({ rating: 5, ratingRepair: 5, code: second.code }).expect(201);
+    await server.post('/reviews').send({ rating: 5, code: second.code }).expect(201);
     const review = await f.prisma.review.findFirstOrThrow({ where: { orderId: sale.body.id } });
-    expect(review).toMatchObject({ serviceType: 'ACCESSORY_PURCHASE', status: 'PUBLISHED', ratingRepair: null });
+    expect(review).toMatchObject({ serviceType: 'ACCESSORY_PURCHASE', status: 'PUBLISHED' });
     await f.agents.seller.get('/review-codes/autre/x').expect(404);
   });
 });
@@ -250,15 +249,14 @@ describe('Sécurité et autorisations', () => {
 
   it('vérifie les rôles côté serveur', async () => {
     await f.agents.seller.get('/stats/report').expect(403);
-    await f.agents.technician.get('/expenses').expect(403);
-    await f.agents.seller.post('/products').set(CSRF).send({ name: 'X', categoryId: f.ids.accCategory, salePrice: 1 }).expect(403);
-    await f.agents.technician.post('/orders/counter-sale').set(CSRF).send({ items: [], payments: [] }).expect(403);
+    await f.agents.seller.get('/expenses').expect(403);
+    await f.agents.seller.post('/catalog-groups').set(CSRF).send({ kind: 'ACCESSORY', name: 'X', categoryId: f.ids.accCategory, variants: [{ salePrice: 1 }] }).expect(403);
   });
 
   it('masque les coûts aux vendeurs et au public', async () => {
     const list = await f.agents.seller.get('/products').expect(200);
     expect(list.body.items.every((p: { averageCost: unknown }) => p.averageCost === null)).toBe(true);
-    const pub = await request(f.app.getHttpServer()).get('/shop/products').expect(200);
+    const pub = await request(f.app.getHttpServer()).get('/shop/catalog').expect(200);
     expect(JSON.stringify(pub.body)).not.toMatch(/averageCost|stockValue/);
   });
 
@@ -280,9 +278,6 @@ describe('Statistiques', () => {
     const expense = await f.agents.manager.post('/expenses').set(CSRF).field('label', 'Loyer').field('category', 'RENT').field('amount', '50000').field('expenseDate', new Date().toISOString().slice(0, 10)).field('paymentMethod', 'CASH').expect(201);
     await f.agents.manager.post('/expenses').set(CSRF).field('label', 'Internet').field('category', 'INTERNET').field('amount', '3000').field('expenseDate', new Date().toISOString().slice(0, 10)).field('paymentMethod', 'CASH').expect(201);
     await f.agents.manager.post(`/expenses/${expense.body.id}/void`).set(CSRF).send({ reason: 'Saisie en double' }).expect(200);
-    // Réparation annulée : jamais comptée.
-    const cancelled = await f.agents.technician.post('/repairs').set(CSRF).send({ customerPhone: '90000009', brandName: 'Itel', modelName: 'A70', reportedIssue: 'Écran', billedAmount: 9000 }).expect(201);
-    await f.agents.technician.post(`/repairs/${cancelled.body.id}/status`).set(CSRF).send({ status: 'CANCELLED', note: 'Annulé par le client' }).expect(200);
 
     const after = (await f.agents.manager.get('/stats/report?period=today').expect(200)).body.totals;
     expect(after.revenue - before.revenue).toBe(18000);
@@ -291,6 +286,6 @@ describe('Statistiques', () => {
     expect(after.grossMargin - before.grossMargin).toBe(7000);
     expect(after.expenses - before.expenses).toBe(3000);
     expect(after.estimatedResult - before.estimatedResult).toBe(4000);
-    expect(after.revenueRepairs).toBe(before.revenueRepairs);
+    expect(after.revenueAccessories - before.revenueAccessories).toBe(18000);
   });
 });

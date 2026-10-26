@@ -53,13 +53,6 @@ export class UsersController {
     private readonly audit: AuditService,
   ) {}
 
-  /** Liste réduite (nom, rôle) utile aux formulaires : affectation d'un réparateur. */
-  @Get('staff')
-  @RequirePermissions('repairs.read')
-  staff() {
-    return this.prisma.user.findMany({ where: { active: true }, select: { id: true, name: true, role: true }, orderBy: { name: 'asc' } });
-  }
-
   @Get()
   @RequirePermissions('users.manage')
   list() {

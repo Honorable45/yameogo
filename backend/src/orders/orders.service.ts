@@ -11,20 +11,17 @@ import { StockService } from '../inventory/stock.service';
 import { OnlinePaymentsService } from '../payments/online-payments.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PrismaService, Tx } from '../prisma/prisma.service';
-import { UsedPhonesService } from '../used-phones/used-phones.service';
 import { canTransitionOrder, checkoutError, ORDER_STATUS_LABELS } from './order-rules';
 
 export interface CartItemInput {
-  productId?: string;
-  usedPhoneId?: string;
+  productId: string;
   quantity: number;
   /** Prix unitaire négocié (vente au comptoir, Responsable uniquement). */
   unitPrice?: number;
 }
 
 interface PricedLine {
-  productId: string | null;
-  usedPhoneId: string | null;
+  productId: string;
   label: string;
   sku: string;
   quantity: number;
@@ -56,8 +53,7 @@ export interface CounterSaleInput {
 const detailInclude = {
   items: {
     include: {
-      product: { select: { id: true, slug: true, images: { orderBy: { position: 'asc' as const }, take: 1 } } },
-      usedPhone: { select: { id: true, slug: true, reference: true, images: { orderBy: { position: 'asc' as const }, take: 1 } } },
+      product: { select: { id: true, group: { select: { slug: true, kind: true, images: { orderBy: { position: 'asc' as const }, take: 1 } } } } },
     },
   },
   payments: { orderBy: { createdAt: 'asc' as const }, include: { recordedBy: { select: { name: true } } } },
@@ -79,7 +75,6 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stock: StockService,
-    private readonly phones: UsedPhonesService,
     private readonly payments: PaymentsService,
     private readonly online: OnlinePaymentsService,
     private readonly customers: CustomersService,
@@ -91,61 +86,33 @@ export class OrdersService {
 
   /** Valorise un panier au prix du catalogue et signale les problèmes de disponibilité. */
   async priceCart(client: Tx | PrismaService, items: CartItemInput[], allowPriceOverride = false): Promise<PricedLine[]> {
-    const productIds = items.map((i) => i.productId).filter((x): x is string => Boolean(x));
-    const phoneIds = items.map((i) => i.usedPhoneId).filter((x): x is string => Boolean(x));
-    if (new Set(productIds).size !== productIds.length || new Set(phoneIds).size !== phoneIds.length) {
-      throw new BadRequestException('Un article apparaît plusieurs fois dans le panier.');
-    }
-    const [products, phones] = await Promise.all([
-      client.product.findMany({ where: { id: { in: productIds } } }),
-      client.usedPhone.findMany({ where: { id: { in: phoneIds } } }),
-    ]);
+    const productIds = items.map((i) => i.productId);
+    if (new Set(productIds).size !== productIds.length) throw new BadRequestException('Un article apparaît plusieurs fois dans le panier.');
+    const products = await client.product.findMany({ where: { id: { in: productIds } } });
 
     return items.map((item): PricedLine => {
-      if (Boolean(item.productId) === Boolean(item.usedPhoneId)) throw new BadRequestException('Ligne de panier invalide.');
       if (item.unitPrice !== undefined && !allowPriceOverride) throw new ForbiddenException('Modification de prix non autorisée.');
-
-      if (item.productId) {
-        const p = products.find((x) => x.id === item.productId);
-        if (!p) throw new BadRequestException('Un article du panier n’existe plus.');
-        const available = Math.max(0, p.stockQuantity - p.reservedQuantity);
-        const sellable = p.status === 'ACTIVE' && p.kind === 'ACCESSORY' && p.published;
-        const unitPrice = item.unitPrice ?? p.salePrice;
-        return {
-          productId: p.id,
-          usedPhoneId: null,
-          label: p.name,
-          sku: p.sku,
-          quantity: item.quantity,
-          unitPrice,
-          catalogPrice: p.salePrice,
-          lineTotal: unitPrice * item.quantity,
-          available,
-          issue: !sellable
-            ? "Cet article n'est plus proposé à la vente."
-            : available < item.quantity
-              ? available === 0
-                ? 'Épuisé'
-                : `Seulement ${available} disponible${available > 1 ? 's' : ''}`
-              : null,
-        };
-      }
-
-      const phone = phones.find((x) => x.id === item.usedPhoneId);
-      if (!phone) throw new BadRequestException('Un téléphone du panier n’existe plus.');
-      if (item.quantity !== 1) throw new BadRequestException("Un téléphone d'occasion est un exemplaire unique (quantité 1).");
-      const unitPrice = item.unitPrice ?? phone.salePrice;
+      const p = products.find((x) => x.id === item.productId);
+      if (!p) throw new BadRequestException('Un article du panier n’existe plus.');
+      const available = Math.max(0, p.stockQuantity - p.reservedQuantity);
+      const sellable = p.status === 'ACTIVE' && p.published;
+      const unitPrice = item.unitPrice ?? p.salePrice;
       return {
-        productId: null,
-        usedPhoneId: phone.id,
-        label: [phone.modelName, phone.storageGb ? `${phone.storageGb} Go` : null, phone.color, phone.condition === 'NEW' ? 'neuf' : phone.condition === 'IMPORTED' ? 'venu' : 'occasion'].filter(Boolean).join(' · '),
-        sku: phone.reference,
-        quantity: 1,
+        productId: p.id,
+        label: p.name,
+        sku: p.sku,
+        quantity: item.quantity,
         unitPrice,
-        catalogPrice: phone.salePrice,
-        lineTotal: unitPrice,
-        available: phone.status === 'AVAILABLE' ? 1 : 0,
-        issue: phone.status === 'AVAILABLE' ? null : "Ce téléphone n'est plus disponible.",
+        catalogPrice: p.salePrice,
+        lineTotal: unitPrice * item.quantity,
+        available,
+        issue: !sellable
+          ? "Cet article n'est plus proposé à la vente."
+          : available < item.quantity
+            ? available === 0
+              ? 'Épuisé'
+              : `Seulement ${available} disponible${available > 1 ? 's' : ''}`
+            : null,
       };
     });
   }
@@ -210,7 +177,7 @@ export class OrdersService {
           history: { create: { toStatus: 'PENDING', note: 'Commande passée en ligne' } },
         },
       });
-      await this.reserveLines(tx, lines, number);
+      await this.reserveLines(tx, lines);
       return created;
     });
     return { number: order.number, accessToken: order.accessToken, total: order.total };
@@ -219,7 +186,6 @@ export class OrdersService {
   private itemData(l: PricedLine) {
     return {
       productId: l.productId,
-      usedPhoneId: l.usedPhoneId,
       label: l.label,
       sku: l.sku,
       quantity: l.quantity,
@@ -229,12 +195,9 @@ export class OrdersService {
   }
 
   /** Réservations dans un ordre déterministe (évite les interblocages entre commandes simultanées). */
-  private async reserveLines(tx: Tx, lines: PricedLine[], orderNumber: string) {
-    const sorted = [...lines].sort((a, b) => (a.productId ?? a.usedPhoneId!).localeCompare(b.productId ?? b.usedPhoneId!));
-    for (const line of sorted) {
-      if (line.productId) await this.stock.reserve(tx, line.productId, line.quantity);
-      else await this.phones.reserve(tx, line.usedPhoneId!, orderNumber);
-    }
+  private async reserveLines(tx: Tx, lines: PricedLine[]) {
+    const sorted = [...lines].sort((a, b) => a.productId.localeCompare(b.productId));
+    for (const line of sorted) await this.stock.reserve(tx, line.productId, line.quantity);
   }
 
   // ─── Vente au comptoir
@@ -309,24 +272,22 @@ export class OrdersService {
   /** Sortie de stock des lignes et figement du coût unitaire. */
   private async issueItems(
     tx: Tx,
-    items: { id: string; productId: string | null; usedPhoneId: string | null; quantity: number }[],
+    items: { id: string; productId: string; quantity: number }[],
     orderNumber: string,
     fromReservation: boolean,
     userId: string | null,
   ) {
-    const sorted = [...items].sort((a, b) => (a.productId ?? a.usedPhoneId!).localeCompare(b.productId ?? b.usedPhoneId!));
+    const sorted = [...items].sort((a, b) => a.productId.localeCompare(b.productId));
     for (const item of sorted) {
-      const unitCost = item.productId
-        ? await this.stock.issue(tx, {
-            productId: item.productId,
-            quantity: item.quantity,
-            type: 'SALE',
-            fromReservation,
-            orderItemId: item.id,
-            reason: `Commande ${orderNumber}`,
-            userId,
-          })
-        : await this.phones.markSold(tx, item.usedPhoneId!, orderNumber, fromReservation, userId);
+      const unitCost = await this.stock.issue(tx, {
+        productId: item.productId,
+        quantity: item.quantity,
+        type: 'SALE',
+        fromReservation,
+        orderItemId: item.id,
+        reason: `Commande ${orderNumber}`,
+        userId,
+      });
       await tx.orderItem.update({ where: { id: item.id }, data: { unitCost } });
     }
   }
@@ -363,11 +324,8 @@ export class OrdersService {
         if ((await this.payments.netPaid(tx, { orderId: id })) > 0) {
           throw new ConflictException("Cette commande a été (partiellement) payée : enregistrez d'abord le remboursement.");
         }
-        const sorted = [...order.items].sort((a, b) => (a.productId ?? a.usedPhoneId!).localeCompare(b.productId ?? b.usedPhoneId!));
-        for (const item of sorted) {
-          if (item.productId) await this.stock.release(tx, item.productId, item.quantity);
-          else await this.phones.release(tx, item.usedPhoneId!, order.number, userId);
-        }
+        const sorted = [...order.items].sort((a, b) => a.productId.localeCompare(b.productId));
+        for (const item of sorted) await this.stock.release(tx, item.productId, item.quantity);
         // Les demandes de paiement en ligne encore en attente sont closes.
         await tx.payment.updateMany({ where: { orderId: id, status: 'PENDING' }, data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'Commande annulée' } });
         data.cancelledAt = new Date();
@@ -413,7 +371,7 @@ export class OrdersService {
       if (input.quantity > item.quantity - item.returnedQuantity) {
         throw new BadRequestException(`Quantité retournable maximale : ${item.quantity - item.returnedQuantity}.`);
       }
-      const restock = item.usedPhoneId ? true : input.restock;
+      const restock = input.restock;
       const unitCost = item.unitCost ?? 0;
       const ret = await tx.orderReturn.create({
         data: {
@@ -428,7 +386,7 @@ export class OrdersService {
         },
       });
       await tx.orderItem.update({ where: { id: item.id }, data: { returnedQuantity: { increment: input.quantity } } });
-      if (item.productId && restock) {
+      if (restock) {
         await this.stock.receive(tx, {
           productId: item.productId,
           quantity: input.quantity,
@@ -440,7 +398,6 @@ export class OrdersService {
           userId,
         });
       }
-      if (item.usedPhoneId) await this.phones.markReturned(tx, item.usedPhoneId, order.number, input.reason, userId);
       if (input.refund && input.refund.amount > 0) {
         await this.payments.recordManual(tx, {
           target: { orderId: id },

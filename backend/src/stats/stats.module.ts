@@ -15,7 +15,7 @@ class PeriodQuery {
 }
 
 class ExportQuery extends PeriodQuery {
-  @IsIn(['summary', 'sales', 'repairs', 'expenses']) type: 'summary' | 'sales' | 'repairs' | 'expenses';
+  @IsIn(['summary', 'sales', 'expenses']) type: 'summary' | 'sales' | 'expenses';
 }
 
 /** Échappement CSV (séparateur « ; », compatible avec Excel en français). */
@@ -56,25 +56,16 @@ export class StatsController {
   /** Vue d'ensemble : file de travail de chacun, et chiffres du jour pour le Responsable. */
   @Get('overview')
   async overview(@CurrentUser() me: AuthUser) {
-    const open = ['RECEIVED', 'DIAGNOSING', 'QUOTE_PENDING', 'QUOTE_ACCEPTED', 'WAITING_PARTS', 'IN_PROGRESS'] as const;
-    const canRepairs = can(me.role, 'repairs.read');
     const canOrders = can(me.role, 'orders.read');
-    const [ordersPending, ordersInProgress, requestsNew, quotesPending, repairsLate, repairsReady, repairsWaitingParts, myRepairs, reviewsPending, lowStock] =
-      await Promise.all([
-        canOrders ? this.prisma.order.count({ where: { status: 'PENDING' } }) : null,
-        canOrders ? this.prisma.order.count({ where: { status: { in: ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'] } } }) : null,
-        can(me.role, 'requests.manage') ? this.prisma.repairRequest.count({ where: { status: 'NEW' } }) : null,
-        canRepairs ? this.prisma.repairJob.count({ where: { status: 'QUOTE_PENDING' } }) : null,
-        canRepairs ? this.prisma.repairJob.count({ where: { status: { in: [...open] }, dueAt: { lt: new Date() } } }) : null,
-        canRepairs ? this.prisma.repairJob.count({ where: { status: 'COMPLETED' } }) : null,
-        canRepairs ? this.prisma.repairJob.count({ where: { status: 'WAITING_PARTS' } }) : null,
-        canRepairs ? this.prisma.repairJob.count({ where: { technicianId: me.id, status: { in: [...open] } } }) : null,
-        can(me.role, 'reviews.moderate') ? this.prisma.review.count({ where: { status: { in: ['PENDING', 'FLAGGED'] } } }) : null,
-        can(me.role, 'stock.read')
-          ? this.prisma.$queryRaw<{ count: bigint }[]>`
-              SELECT COUNT(*)::bigint AS count FROM "Product" WHERE "status" = 'ACTIVE' AND "stockQuantity" - "reservedQuantity" <= "lowStockThreshold"`.then((r) => Number(r[0].count))
-          : null,
-      ]);
+    const [ordersPending, ordersInProgress, unpaidSales, lowStock] = await Promise.all([
+      canOrders ? this.prisma.order.count({ where: { status: 'PENDING' } }) : null,
+      canOrders ? this.prisma.order.count({ where: { status: { in: ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'] } } }) : null,
+      canOrders ? this.prisma.order.count({ where: { status: 'COMPLETED', paymentStatus: { not: 'PAID' } } }) : null,
+      can(me.role, 'stock.read')
+        ? this.prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(*)::bigint AS count FROM "Product" WHERE "status" = 'ACTIVE' AND "stockQuantity" - "reservedQuantity" <= "lowStockThreshold"`.then((r) => Number(r[0].count))
+        : null,
+    ]);
 
     let today = null;
     if (can(me.role, 'stats.read')) {
@@ -83,20 +74,17 @@ export class StatsController {
       today = { period: p, totals, snapshot };
     }
 
-    const upcoming = canRepairs
-      ? await this.prisma.repairJob.findMany({
-          where: { status: { in: [...open] } },
-          orderBy: [{ dueAt: { sort: 'asc', nulls: 'last' } }, { receivedAt: 'asc' }],
+    // Dernières ventes (accès rapide aux tickets et aux codes d'avis).
+    const recentSales = canOrders
+      ? await this.prisma.order.findMany({
+          where: { status: { not: 'CANCELLED' } },
+          orderBy: { createdAt: 'desc' },
           take: 8,
-          select: { id: true, number: true, status: true, brandName: true, modelName: true, dueAt: true, receivedAt: true, customer: { select: { name: true } }, technician: { select: { name: true } } },
+          select: { id: true, number: true, status: true, total: true, paymentStatus: true, customerName: true, createdAt: true, _count: { select: { items: true } } },
         })
       : [];
 
-    return {
-      queue: { ordersPending, ordersInProgress, requestsNew, quotesPending, repairsLate, repairsReady, repairsWaitingParts, myRepairs, reviewsPending, lowStock },
-      upcoming,
-      today,
-    };
+    return { queue: { ordersPending, ordersInProgress, unpaidSales, lowStock }, recentSales, today };
   }
 
   @Get('export')
@@ -109,13 +97,12 @@ export class StatsController {
     if (q.type === 'summary') {
       const report = await this.stats.report(period);
       rows = [
-        ['Période', 'CA accessoires', 'CA téléphones', 'CA réparations', 'Livraison', 'CA total', 'Coûts directs', 'Marge brute', 'Encaissements', 'Dépenses générales'],
-        ...report.series.map((s) => [s.bucket, s.accessories, s.phones, s.repairs, s.delivery, s.revenue, s.directCosts, s.grossMargin, s.cashIn, s.expenses]),
+        ['Période', 'CA smartphones', 'CA accessoires', 'Livraison', 'CA total', 'Coûts directs', 'Marge brute', 'Encaissements', 'Dépenses générales'],
+        ...report.series.map((s) => [s.bucket, s.phones, s.accessories, s.delivery, s.revenue, s.directCosts, s.grossMargin, s.cashIn, s.expenses]),
         [
           'Total',
-          report.totals.revenueAccessories,
           report.totals.revenuePhones,
-          report.totals.revenueRepairs,
+          report.totals.revenueAccessories,
           report.totals.revenueDelivery,
           report.totals.revenue,
           report.totals.directCosts,
@@ -148,33 +135,6 @@ export class StatsController {
           i.unitCost,
           (i.unitPrice - (i.unitCost ?? 0)) * (i.quantity - i.returnedQuantity),
         ]),
-      ];
-    } else if (q.type === 'repairs') {
-      const jobs = await this.prisma.repairJob.findMany({
-        where: { status: { in: ['COMPLETED', 'PICKED_UP'] }, completedAt: { gte: start, lt: end } },
-        include: { parts: true, repairType: { select: { name: true } }, technician: { select: { name: true } } },
-        orderBy: { completedAt: 'asc' },
-      });
-      rows = [
-        ['Date de fin', 'Dossier', 'Appareil', 'Panne', 'Réparateur', 'Facturé', 'Encaissé', 'Pièces', 'Consommables', 'Autres coûts', 'Coûts directs', 'Marge brute'],
-        ...jobs.map((j) => {
-          const parts = j.parts.filter((p) => p.status === 'USED').reduce((a, p) => a + p.totalCost, 0);
-          const direct = parts + j.consumablesCost + j.otherDirectCosts;
-          return [
-            j.completedAt!.toISOString().slice(0, 10),
-            j.number,
-            `${j.brandName} ${j.modelName}`,
-            j.repairType?.name ?? j.reportedIssue,
-            j.technician?.name ?? '',
-            j.billedAmount,
-            j.amountPaid,
-            parts,
-            j.consumablesCost,
-            j.otherDirectCosts,
-            direct,
-            j.billedAmount - direct,
-          ];
-        }),
       ];
     } else {
       const expenses = await this.prisma.expense.findMany({

@@ -6,7 +6,6 @@ import { StorageService } from './storage.service';
 
 // Permission requise selon le dossier du fichier privé.
 const FOLDER_PERMISSION: Record<string, Permission> = {
-  requests: 'requests.manage',
   receipts: 'expenses.manage',
 };
 

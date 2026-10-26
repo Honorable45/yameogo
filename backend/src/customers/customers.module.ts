@@ -74,7 +74,7 @@ export class CustomersController {
       this.prisma.customer.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
-        include: { _count: { select: { orders: true, repairJobs: true } } },
+        include: { _count: { select: { orders: true } } },
         ...skipTake(q),
       }),
       this.prisma.customer.count({ where }),
@@ -91,11 +91,6 @@ export class CustomersController {
         orders: can(me.role, 'orders.read')
           ? { orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, number: true, status: true, total: true, paymentStatus: true, createdAt: true, channel: true } }
           : false,
-        repairJobs: {
-          orderBy: { receivedAt: 'desc' },
-          take: 50,
-          select: { id: true, number: true, status: true, brandName: true, modelName: true, billedAmount: true, paymentStatus: true, receivedAt: true },
-        },
       },
     });
     if (!customer) throw new NotFoundException('Client introuvable.');

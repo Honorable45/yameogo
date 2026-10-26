@@ -38,7 +38,7 @@ class UpdateNameDto {
   active?: boolean;
 }
 
-/** Marques et modèles : référentiel partagé par la réparation, les compatibilités et les occasions. */
+/** Marques des smartphones (filtre du catalogue). */
 @Controller('brands')
 export class BrandsController {
   constructor(
@@ -49,14 +49,11 @@ export class BrandsController {
   @Get()
   @RequirePermissions('catalog.read')
   list() {
-    return this.prisma.brand.findMany({
-      orderBy: [{ position: 'asc' }, { name: 'asc' }],
-      include: { models: { orderBy: [{ position: 'asc' }, { name: 'asc' }] } },
-    });
+    return this.prisma.brand.findMany({ orderBy: [{ position: 'asc' }, { name: 'asc' }], include: { _count: { select: { groups: true } } } });
   }
 
   @Post()
-  @RequirePermissions('repairPricing.manage')
+  @RequirePermissions('catalog.write')
   async create(@Body() dto: NameDto, @CurrentUser() me: AuthUser) {
     const slug = slugify(dto.name);
     if (!slug) throw new BadRequestException('Nom invalide.');
@@ -69,27 +66,8 @@ export class BrandsController {
   }
 
   @Patch(':id')
-  @RequirePermissions('repairPricing.manage')
+  @RequirePermissions('catalog.write')
   update(@Param('id') id: string, @Body() dto: UpdateNameDto) {
     return this.prisma.brand.update({ where: { id }, data: { ...dto, name: dto.name?.trim() } });
-  }
-
-  @Post(':id/models')
-  @RequirePermissions('repairPricing.manage')
-  async addModel(@Param('id') brandId: string, @Body() dto: NameDto, @CurrentUser() me: AuthUser) {
-    const slug = slugify(dto.name);
-    if (!slug) throw new BadRequestException('Nom invalide.');
-    if (await this.prisma.phoneModel.findUnique({ where: { brandId_slug: { brandId, slug } } })) {
-      throw new ConflictException('Ce modèle existe déjà pour cette marque.');
-    }
-    const model = await this.prisma.phoneModel.create({ data: { brandId, name: dto.name.trim(), slug, position: dto.position ?? 0 } });
-    await this.audit.log({ userId: me.id, action: 'model.create', entity: 'PhoneModel', entityId: model.id, summary: `Modèle créé : ${model.name}` });
-    return model;
-  }
-
-  @Patch('models/:modelId')
-  @RequirePermissions('repairPricing.manage')
-  updateModel(@Param('modelId') id: string, @Body() dto: UpdateNameDto) {
-    return this.prisma.phoneModel.update({ where: { id }, data: { ...dto, name: dto.name?.trim() } });
   }
 }
