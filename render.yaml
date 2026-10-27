@@ -37,7 +37,7 @@ services:
       # Les navigateurs passent par le relais /api de Vercel, puis par le proxy Render.
       - key: TRUST_PROXY
         value: "2"
-      # Photos sur Cloudflare R2 (le disque Render est effacé à chaque déploiement).
+      # Photos sur Cloudflare R2 (le disque Render est effacé à chaque déploiement) ; R2_BUCKET est obligatoire en production.
       # Tableau de bord Cloudflare › R2 : identifiant de compte, jeton API (Object Read & Write), buckets.
       - key: R2_ACCOUNT_ID
         sync: false

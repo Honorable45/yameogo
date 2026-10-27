@@ -44,8 +44,14 @@ export function loadConfig(): AppConfig {
     throw new Error('DATA_ENCRYPTION_KEY doit représenter exactement 32 octets encodés en base64.');
   }
 
-  // Images sur Cloudflare R2 dès que R2_BUCKET est renseigné ; sinon sur le disque (développement).
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
+  const production = nodeEnv === 'production';
+
+  // Images sur Cloudflare R2 dès que R2_BUCKET est renseigné ; le disque local est réservé au développement.
   const r2Bucket = process.env.R2_BUCKET?.trim();
+  if (production && !r2Bucket) {
+    throw new Error('R2_BUCKET doit être renseigné en production : le disque local de l’API est éphémère.');
+  }
   let r2: AppConfig['storage']['r2'] = null;
   if (r2Bucket) {
     const accountId = required('R2_ACCOUNT_ID');
@@ -64,10 +70,9 @@ export function loadConfig(): AppConfig {
   const driver = r2 ? 'r2' : 'local';
 
   const port = Number(process.env.PORT ?? 4100);
-  const production = process.env.NODE_ENV === 'production';
 
   cached = {
-    nodeEnv: process.env.NODE_ENV ?? 'development',
+    nodeEnv,
     port,
     // En production, pas de repli localhost : les liens (QR codes d'avis…) seraient inutilisables.
     webOrigin: (production ? required('WEB_ORIGIN') : (process.env.WEB_ORIGIN ?? 'http://localhost:3100')).replace(/\/$/, ''),

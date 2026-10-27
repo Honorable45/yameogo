@@ -44,9 +44,6 @@ export class StorageService {
     if (this.r2 && !this.r2.privateBucket) {
       this.logger.warn('R2_PRIVATE_BUCKET absent : les justificatifs de dépenses sont rangés dans le bucket public (sous un nom aléatoire). Un bucket privé est recommandé.');
     }
-    if (!this.r2 && this.config.nodeEnv === 'production') {
-      this.logger.warn('R2_BUCKET absent : les images sont stockées sur le disque du serveur et seront perdues au prochain déploiement.');
-    }
   }
 
   get localRoot() {

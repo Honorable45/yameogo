@@ -29,6 +29,12 @@ describe('Stockage Cloudflare R2', () => {
     expect(storage.publicUrl('products/2026-10/abc')).toMatch(/\/uploads\/products\/2026-10\/abc-1600\.webp$/);
   });
 
+  it('refuse le stockage local éphémère en production', () => {
+    process.env.NODE_ENV = 'production';
+    resetConfigCache();
+    expect(() => loadConfig()).toThrow('R2_BUCKET doit être renseigné en production');
+  });
+
   it('exige les autres variables R2 dès qu’un bucket est indiqué', () => {
     process.env.R2_BUCKET = 'yameogo-images';
     resetConfigCache();
