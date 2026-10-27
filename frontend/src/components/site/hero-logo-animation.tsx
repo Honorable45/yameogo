@@ -147,7 +147,7 @@ export function HeroLogoAnimation({ className }: { className?: string }) {
 
           {/* HOME */}
           <text className={s['ysh-home']} style={font} x="742" y="728" textAnchor="middle" fontWeight="800" fontSize="82" letterSpacing="2" fill={navy}>
-            HOME
+            TECH
           </text>
         </g>
       </svg>
