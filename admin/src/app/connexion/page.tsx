@@ -1,5 +1,6 @@
 'use client';
 
+import { BrandMark } from '@/components/ui/brand-mark';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
 import { api, errorMessage } from '@/lib/api';
@@ -45,10 +46,9 @@ export default function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12">
         <a href="/" className="flex items-baseline gap-2">
-          <span className="flex items-center uppercase leading-none text-ink">
-            <span className="text-[16px] font-semibold tracking-[0.2em]">Yameogo</span>
-            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre" aria-hidden="true" />
-            <span className="text-[10px] font-medium tracking-[0.3em] text-ink-2">Smart Tech</span>
+          <span className="flex items-center gap-2 leading-none text-ink">
+            <BrandMark className="h-8 w-auto shrink-0" />
+            <span className="text-[17px] font-semibold tracking-tight">Le Marchand</span>
           </span>
         </a>
         <div className="mx-auto w-full max-w-sm py-12">

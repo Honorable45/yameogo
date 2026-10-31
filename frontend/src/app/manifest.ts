@@ -4,8 +4,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Yameogo Smart Tech — Smartphones et accessoires',
-    short_name: 'Yameogo',
+    name: 'Le Marchand — Smartphones et accessoires',
+    short_name: 'Le Marchand',
     description: 'Smartphones neufs et d’occasion, accessoires. Commande sur WhatsApp.',
     lang: 'fr',
     start_url: '/?source=pwa',

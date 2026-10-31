@@ -148,7 +148,7 @@ export class StatsController {
       ];
     }
 
-    const filename = `yameogo-${q.type}-${period.startDate}_${period.endDate}.csv`;
+    const filename = `le-marchand-${q.type}-${period.startDate}_${period.endDate}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-store');

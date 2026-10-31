@@ -13,7 +13,7 @@ export function SiteFooter({ settings: s }: { settings: PublicSettings | null })
     <footer className="mt-16 bg-navy text-paper sm:mt-24">
       <div className="container-page grid gap-8 py-10 sm:gap-10 sm:py-14 md:grid-cols-3">
         <div>
-          <Logo logoUrl={null} name={s?.shopName} inverted />
+          <Logo logoUrl={null} name="Le Marchand" inverted />
           <SocialLinks settings={s} className="mt-6" />
           <InstallButton className="mt-5" />
           {s?.phone && <p className="num mt-4 text-[14px] text-paper/80">{formatPhone(s.phone)}</p>}
@@ -46,7 +46,7 @@ export function SiteFooter({ settings: s }: { settings: PublicSettings | null })
       </div>
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-2 py-5 text-[12.5px] text-paper/50 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} {s?.shopName ?? 'Yameogo Smart Tech'}</p>
+          <p>© {new Date().getFullYear()} Le Marchand</p>
           <p className="flex gap-5">
             <Link href="/mentions-legales" className="hover:text-paper">Mentions légales</Link>
             <Link href="/confidentialite" className="hover:text-paper">Confidentialité</Link>

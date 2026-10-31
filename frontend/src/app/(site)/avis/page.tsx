@@ -9,7 +9,7 @@ import type { PublicSettings, ReviewsPage } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Avis clients',
-  description: 'Les avis des clients de YAMEOGO, donnés avec le code reçu lors de leur achat.',
+  description: 'Les avis des clients de Le Marchand, donnés avec le code reçu lors de leur achat.',
   alternates: { canonical: '/avis' },
 };
 
@@ -25,7 +25,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHero title="Avis clients" image={settings?.shopImageUrl}>
+      <PageHero title="Avis clients" image="/photos/magasin.webp">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
           {has && s && (
             <div className="glass flex items-center gap-5 rounded-3xl px-6 py-4">
@@ -82,7 +82,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
                   <p className="mt-4 text-[13px] text-muted">{[r.displayName, r.serviceLabel, formatDate(r.createdAt)].filter(Boolean).join(' · ')}</p>
                   {r.shopReply && (
                     <div className="mt-4 rounded-2xl bg-paper px-4 py-3 text-[14px] text-ink-2">
-                      <p className="text-[12.5px] font-medium text-navy">Réponse de YAMEOGO</p>
+                      <p className="text-[12.5px] font-medium text-navy">Réponse de Le Marchand</p>
                       <p className="mt-1">{r.shopReply}</p>
                     </div>
                   )}

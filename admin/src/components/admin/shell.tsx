@@ -1,4 +1,5 @@
 'use client';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { useSiteUrl } from '@/lib/site-url';
 
 import { ChevronDown, ExternalLink, LogOut, Menu, Plus, Search, UserRound, X } from 'lucide-react';
@@ -49,10 +50,9 @@ function Sidebar({ queue, onNavigate }: { queue: Queue | undefined; onNavigate?:
     <div className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <Link href="/" onClick={onNavigate} className="flex items-baseline gap-2">
-          <span className="flex items-center uppercase leading-none text-ink">
-            <span className="text-[15px] font-semibold tracking-[0.2em]">Yameogo</span>
-            <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre" aria-hidden="true" />
-            <span className="text-[10px] font-medium tracking-[0.3em] text-ink-2">Smart Tech</span>
+          <span className="flex items-center gap-2 leading-none text-ink">
+            <BrandMark className="h-7 w-auto shrink-0" />
+            <span className="text-[16px] font-semibold tracking-tight">Le Marchand</span>
           </span>
         </Link>
       </div>

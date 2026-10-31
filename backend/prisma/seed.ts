@@ -43,8 +43,8 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      shopName: 'Yameogo Smart Tech',
-      tagline: 'La qualité au meilleur prix',
+      shopName: 'Le Marchand',
+      tagline: 'Votre repère du numérique.',
       // Photos libres de droits (licence Unsplash) — remplaçables depuis Paramètres › Photos du site.
       heroImageUrl: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=1600&q=80&fm=webp',
       heroImageAlt: 'Smartphones posés sur un fond bleu clair',

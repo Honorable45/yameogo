@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { CatalogListing, type CatalogSearch } from '@/components/site/catalog-listing';
 import { PageHero } from '@/components/site/page-hero';
-import { serverGet } from '@/lib/server-api';
-import type { PublicSettings } from '@/lib/types';
 
 export const metadata: Metadata = {
   title: 'Smartphones',
@@ -11,10 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default async function PhonesPage({ searchParams }: { searchParams: Promise<CatalogSearch> }) {
-  const [search, settings] = await Promise.all([searchParams, serverGet<PublicSettings>('/settings/public', 60)]);
+  const search = await searchParams;
   return (
     <>
-      <PageHero title="Smartphones" image={settings?.phonesImageUrl} compact />
+      <PageHero title="Smartphones" image="/photos/rayons.webp" compact />
       <div className="container-page mt-8">
         <CatalogListing kind="PHONE" search={search} basePath="/telephones" />
       </div>

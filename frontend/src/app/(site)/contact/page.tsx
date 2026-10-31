@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 /** Contact et informations commerciales : seules les informations renseignées dans Paramètres apparaissent. */
 export default async function ContactPage() {
   const s = await serverGet<PublicSettings>('/settings/public', 60);
-  const shopName = s?.shopName ?? 'Yameogo Smart Tech';
+  const shopName = s?.shopName ?? 'Le Marchand';
   const address = [s?.addressLine, s?.city, s?.country].filter(Boolean).join(', ');
   const opening = s?.openingHours.length ? todayOpening(s.openingHours) : null;
   const directions = directionsUrl(s);
@@ -31,7 +31,7 @@ export default async function ContactPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-navy text-white">
-        {s?.shopImageUrl && <Image src={s.shopImageUrl} alt={s.shopImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />}
+        <Image src="/photos/magasin.webp" alt="Intérieur de la boutique" fill priority sizes="100vw" className="object-cover" />
         <span className="absolute inset-0 bg-navy/65" aria-hidden="true" />
         <div className="container-page relative pb-10 pt-40 lg:pt-32">
           <BackButton tone="dark" className="mb-6" />

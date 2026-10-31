@@ -47,7 +47,7 @@ export class OnlinePaymentsService {
         amount: payment.amount,
         phone,
         network,
-        description: `YAMEOGO - commande ${payment.order!.number}`,
+        description: `Le Marchand - commande ${payment.order!.number}`,
       });
       await this.prisma.payment.update({ where: { id: payment.id }, data: { externalReference: txReference } });
     } catch (err) {

@@ -17,17 +17,23 @@ const lexend = localFont({
 /** Durée totale de l'animation (ms) : un nouveau rejeu n'est possible qu'une fois la précédente terminée. */
 const DURATION = 4900;
 const LETTERS: [string, number][] = [
-  ['Y', 426],
-  ['A', 522],
-  ['M', 626],
-  ['E', 723],
-  ['O', 815],
-  ['G', 915],
-  ['O', 1014],
+  ['L', 91],
+  ['e', 190],
+  ['M', 369],
+  ['a', 500],
+  ['r', 595],
+  ['c', 678],
+  ['h', 779],
+  ['a', 891],
+  ['n', 1002],
+  ['d', 1113],
 ];
 
+const FRONT_TOP = 'M258 226L820 262L860 548L750 345L585 648L335 348L258 648Z';
+const FRONT_BOTTOM = 'M254 982L385 560L605 825L752 540L912 885Z';
+
 /**
- * Logo animé « Yameogo Smart Home » (SVG + CSS pur).
+ * Logo animé « Le Marchand » (SVG + CSS pur).
  * - Démarre quand il devient visible (une fois par chargement), puis reste figé sur le logo final.
  * - Se rejoue au survol (souris) ou au toucher, jamais en boucle automatique.
  * - `prefers-reduced-motion` : logo final affiché directement.
@@ -39,7 +45,7 @@ export function HeroLogoAnimation({ className }: { className?: string }) {
   const [run, setRun] = useState(0);
   const startedAt = useRef(0);
   // Identifiants uniques des <defs> : deux logos sur la même page ne se marchent pas dessus.
-  const uid = `ysh-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const uid = `lm-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const id = (name: string) => `${uid}-${name}`;
 
   useEffect(() => {
@@ -71,83 +77,62 @@ export function HeroLogoAnimation({ className }: { className?: string }) {
     setRun((r) => r + 1);
   };
 
-  const navy = 'var(--ysh-navy)';
+  const ink = 'var(--lm-ink)';
   const font: CSSProperties = { fontFamily: lexend.style.fontFamily };
 
   return (
     <div
       ref={root}
-      className={[s['ysh-root'], playing ? '' : s['ysh-idle'], className].filter(Boolean).join(' ')}
+      className={[s['lm-root'], playing ? '' : s['lm-idle'], className].filter(Boolean).join(' ')}
       onPointerEnter={(e) => e.pointerType === 'mouse' && replay()}
       onClick={replay}
     >
       {/* Sans JavaScript, l'animation se joue directement. */}
       <noscript>
-        <style>{`.${s['ysh-idle']} *{animation-play-state:running!important}`}</style>
+        <style>{`.${s['lm-idle']} *{animation-play-state:running!important}`}</style>
       </noscript>
-      <svg key={run} className={s['ysh-svg']} viewBox="0 0 1210 864" role="img" aria-label="Logo Yameogo Smart Home">
+      <svg key={run} className={s['lm-svg']} viewBox="0 0 1210 864" role="img" aria-label="Logo Le Marchand, votre repère du numérique">
         <defs>
-          <linearGradient id={id('og')} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#f9a51a" />
-            <stop offset=".55" stopColor="#f58a1c" />
-            <stop offset="1" stopColor="#ee5d1b" />
-          </linearGradient>
-          <linearGradient id={id('pg')} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#ef641b" />
-            <stop offset=".5" stopColor="#f9a51a" />
-            <stop offset="1" stopColor="#ef641b" />
-          </linearGradient>
           <linearGradient id={id('sh')} x1="0" x2="1">
             <stop offset="0" stopColor="#fff" stopOpacity="0" />
             <stop offset=".5" stopColor="#fff" stopOpacity=".7" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
-          <clipPath id={id('pill-clip')}>
-            <rect x="502" y="525" width="455" height="110" rx="22" />
+          <clipPath id={id('bag-clip')}>
+            <path d={FRONT_TOP} />
+            <path d={FRONT_BOTTOM} />
           </clipPath>
-          <mask id={id('phone-mask')} maskUnits="userSpaceOnUse" x="0" y="0" width="1210" height="864">
-            <rect width="1210" height="864" fill="#fff" />
-            <rect x="372" y="388" width="300" height="400" fill="#000" />
-          </mask>
         </defs>
 
-        <g className={s['ysh-all']}>
-          {/* Téléphone */}
-          <g mask={`url(#${id('phone-mask')})`}>
-            <rect className={s['ysh-draw']} x="250" y="108" width="325" height="560" rx="56" pathLength={1} strokeWidth="5" />
-            <rect className={`${s['ysh-draw']} ${s['ysh-inner']}`} x="259" y="117" width="307" height="542" rx="48" pathLength={1} strokeWidth="3" />
-            <rect className={`${s['ysh-pop']} ${s['ysh-notch']}`} x="366" y="134" width="92" height="24" rx="12" fill={navy} />
-            <rect className={`${s['ysh-pop']} ${s['ysh-btn']}`} x="245" y="232" width="6" height="26" rx="3" fill={navy} />
-            <rect className={`${s['ysh-pop']} ${s['ysh-btn']}`} x="245" y="282" width="6" height="40" rx="3" fill={navy} />
-            <rect className={`${s['ysh-pop']} ${s['ysh-btn']}`} x="245" y="340" width="6" height="40" rx="3" fill={navy} />
-            <rect className={`${s['ysh-pop']} ${s['ysh-btn']}`} x="574" y="300" width="6" height="44" rx="3" fill={navy} />
+        <g className={s['lm-all']}>
+          <g transform="translate(360 30) scale(0.5)">
+            {/* Le sac se dessine : contour, flanc, anses */}
+            <path className={`${s['lm-draw']} ${s['lm-ghost']}`} d="M258 226L820 262L912 885L254 982Z" pathLength={1} strokeWidth="8" />
+            <path className={s['lm-draw']} d="M120 248L225 228L222 972L66 918Z" pathLength={1} strokeWidth="8" />
+            <path className={`${s['lm-pop']} ${s['lm-side']}`} d="M120 248L225 228L222 972L66 918Z" fill="#db851b" />
+            <path className={`${s['lm-draw']} ${s['lm-handle-back']}`} d="M348 232C362 120 425 76 482 78C560 84 612 150 626 250" pathLength={1} strokeWidth="30" />
+            <path className={`${s['lm-draw']} ${s['lm-handle']}`} d="M416 236C430 130 490 90 532 92C612 96 664 170 678 254" pathLength={1} strokeWidth="30" />
+
+            {/* Les deux pièces du sac arrivent et font apparaître le M */}
+            <path className={s['lm-piece-top']} d={FRONT_TOP} fill="#f59a1e" />
+            <path className={s['lm-piece-bot']} d={FRONT_BOTTOM} fill="#f59a1e" />
+            <g clipPath={`url(#${id('bag-clip')})`}>
+              <rect className={s['lm-shine']} x="-100" y="100" width="240" height="1000" fill={`url(#${id('sh')})`} transform="skewX(-20)" />
+            </g>
           </g>
 
-          {/* Arcs orange */}
-          <path className={s['ysh-arc-top']} fill={`url(#${id('og')})`} d="M579 202 C640 176 725 172 724 228 C722 285 660 335 610 362 C648 318 686 276 688 240 C690 214 640 205 579 220 Z" />
-          <path className={s['ysh-arc-bot']} fill={`url(#${id('og')})`} d="M246 492 C188 556 160 640 196 686 C245 742 378 676 448 572 C372 638 278 688 244 660 C214 636 222 560 246 492 Z" />
-
-          {/* YAMEOGO */}
-          <g style={font} fontWeight="900" fontSize="128" fill={navy} textAnchor="middle" stroke="#fff" strokeWidth="14" paintOrder="stroke" strokeLinejoin="round">
+          {/* Le Marchand */}
+          <g style={font} fontWeight="800" fontSize="176" fill={ink} textAnchor="middle" stroke="#fff" strokeWidth="10" paintOrder="stroke" strokeLinejoin="round">
             {LETTERS.map(([letter, x], i) => (
-              <text key={i} className={s['ysh-letter']} style={{ '--ysh-i': i } as CSSProperties} x={x} y="495">
+              <text key={i} className={s['lm-letter']} style={{ '--lm-i': i } as CSSProperties} x={x} y="690">
                 {letter}
               </text>
             ))}
           </g>
 
-          {/* SMART */}
-          <rect className={s['ysh-pill']} x="502" y="525" width="455" height="110" rx="22" fill={`url(#${id('pg')})`} />
-          <text className={s['ysh-smart']} style={font} x="730" y="613" textAnchor="middle" fontWeight="800" fontSize="92" fill="#fff">
-            SMART
-          </text>
-          <g clipPath={`url(#${id('pill-clip')})`}>
-            <rect className={s['ysh-shine']} x="400" y="500" width="120" height="160" fill={`url(#${id('sh')})`} transform="skewX(-20)" />
-          </g>
-
-          {/* HOME */}
-          <text className={s['ysh-home']} style={font} x="742" y="728" textAnchor="middle" fontWeight="800" fontSize="82" letterSpacing="2" fill={navy}>
-            TECH
+          {/* Votre repère du numérique. */}
+          <text className={s['lm-baseline']} x="605" y="775" textAnchor="middle" fontFamily="var(--font-sans)" fontWeight="500" fontSize="50" fill={ink}>
+            VOTRE REPÈRE DU NUMÉRIQUE.
           </text>
         </g>
       </svg>

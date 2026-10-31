@@ -12,7 +12,7 @@ export default async function CartPage() {
     <div className="container-page pt-40 lg:pt-32">
       <BackButton fallback="/telephones" className="mb-6" />
       <h1 className="display mb-8 text-[38px] sm:text-[48px]">Panier</h1>
-      <CartView whatsapp={settings?.whatsapp ?? null} shopName={settings?.shopName ?? 'Yameogo Smart Tech'} deliveryInfo={settings?.deliveryInfo ?? null} />
+      <CartView whatsapp={settings?.whatsapp ?? null} shopName={settings?.shopName ?? 'Le Marchand'} deliveryInfo={settings?.deliveryInfo ?? null} />
     </div>
   );
 }

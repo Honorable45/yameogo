@@ -39,12 +39,12 @@ const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: 'Yameogo Smart Tech — La qualité au meilleur prix', template: '%s · Yameogo Smart Tech' },
+  title: { default: 'Le Marchand — Votre repère du numérique.', template: '%s · Le Marchand' },
   description: 'Smartphones neufs et d’occasion, coques, chargeurs, écouteurs et accessoires. Choisissez votre configuration et commandez sur WhatsApp. Prix en FCFA.',
-  openGraph: { type: 'website', locale: 'fr_FR', siteName: 'Yameogo Smart Tech' },
+  openGraph: { type: 'website', locale: 'fr_FR', siteName: 'Le Marchand' },
   icons: { icon: [{ url: '/icon.svg', type: 'image/svg+xml' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }], apple: '/apple-touch-icon.png' },
   // Application installée sur iPhone : ouverte sans barre d'adresse.
-  appleWebApp: { capable: true, title: 'Yameogo', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'Le Marchand', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
 };
 

@@ -1,11 +1,11 @@
 /*
- * Logo animé « Yameogo Smart Home » (≈ 4,5 s) : le téléphone se dessine, les arcs orange arrivent,
- * les lettres de YAMEOGO tombent, le bandeau SMART s'étire avec un reflet, puis HOME apparaît.
- * Classes et animations préfixées « ysh- » ; CSS pur, sans bibliothèque.
+ * Logo animé « Le Marchand » (≈ 4,5 s) : le sac se dessine, ses deux pièces arrivent et révèlent le M,
+ * les lettres tombent, la signature se resserre, puis un reflet traverse le sac.
+ * Classes et animations préfixées « lm- » ; CSS pur, sans bibliothèque.
  */
 
-.ysh-root {
-  --ysh-navy: #13285a;
+.lm-root {
+  --lm-ink: #15171c;
   display: block;
   width: 100%;
   max-width: 560px;
@@ -14,7 +14,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.ysh-svg {
+.lm-svg {
   display: block;
   width: 100%;
   height: auto;
@@ -22,41 +22,52 @@
 }
 
 /* En attente de visibilité : la scène est figée sur son premier instant. */
-.ysh-idle * {
+.lm-idle * {
   animation-play-state: paused !important;
 }
 
-/* ---------- Téléphone ---------- */
-.ysh-draw {
+/* ---------- Le sac se dessine ---------- */
+.lm-draw {
   fill: none;
-  stroke: var(--ysh-navy);
+  stroke: #f59a1e;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  stroke-linecap: round;
-  animation: ysh-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  animation: lm-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
-.ysh-draw.ysh-inner {
+.lm-handle-back {
+  stroke: #de8e22;
   animation-delay: 0.25s;
 }
-@keyframes ysh-draw {
+.lm-handle {
+  animation-delay: 0.4s;
+}
+/* Contour de la face avant : simple guide, il s'efface à l'arrivée des pièces. */
+.lm-ghost {
+  animation:
+    lm-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) forwards,
+    lm-fade 0.4s ease-out 1.5s forwards;
+}
+@keyframes lm-draw {
   to {
     stroke-dashoffset: 0;
   }
 }
+@keyframes lm-fade {
+  to {
+    opacity: 0;
+  }
+}
 
-.ysh-pop {
+.lm-pop {
   transform-box: fill-box;
   transform-origin: center;
   opacity: 0;
-  animation: ysh-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: lm-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
-.ysh-notch {
+.lm-side {
   animation-delay: 1.05s;
 }
-.ysh-btn {
-  animation-delay: 1.2s;
-}
-@keyframes ysh-pop {
+@keyframes lm-pop {
   from {
     opacity: 0;
     transform: scale(0);
@@ -67,33 +78,33 @@
   }
 }
 
-/* ---------- Arcs orange ---------- */
-.ysh-arc-top {
+/* ---------- Pièces du sac ---------- */
+.lm-piece-top {
   transform-box: fill-box;
   transform-origin: 0% 50%;
   opacity: 0;
-  animation: ysh-swoop-top 0.8s cubic-bezier(0.22, 1.2, 0.36, 1) 1.3s forwards;
+  animation: lm-swoop-top 0.8s cubic-bezier(0.22, 1.2, 0.36, 1) 1.3s forwards;
 }
-@keyframes ysh-swoop-top {
+@keyframes lm-swoop-top {
   from {
     opacity: 0;
-    transform: translate(120px, -60px) rotate(60deg) scale(0.3);
+    transform: translate(240px, -120px) rotate(60deg) scale(0.3);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-.ysh-arc-bot {
+.lm-piece-bot {
   transform-box: fill-box;
   transform-origin: 100% 40%;
   opacity: 0;
-  animation: ysh-swoop-bot 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) 1.5s forwards;
+  animation: lm-swoop-bot 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) 1.5s forwards;
 }
-@keyframes ysh-swoop-bot {
+@keyframes lm-swoop-bot {
   from {
     opacity: 0;
-    transform: translate(-140px, 90px) rotate(-70deg) scale(0.3);
+    transform: translate(-280px, 180px) rotate(-70deg) scale(0.3);
   }
   to {
     opacity: 1;
@@ -101,15 +112,15 @@
   }
 }
 
-/* ---------- YAMEOGO ---------- */
-.ysh-letter {
+/* ---------- Le Marchand ---------- */
+.lm-letter {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   opacity: 0;
-  animation: ysh-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: calc(2s + var(--ysh-i) * 0.085s);
+  animation: lm-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: calc(2s + var(--lm-i) * 0.085s);
 }
-@keyframes ysh-drop {
+@keyframes lm-drop {
   0% {
     opacity: 0;
     transform: translateY(-140px) scaleY(1.3);
@@ -123,64 +134,35 @@
   }
 }
 
-/* ---------- SMART ---------- */
-.ysh-pill {
-  transform-box: fill-box;
-  transform-origin: 0% 50%;
-  transform: scaleX(0);
-  animation: ysh-grow 0.55s cubic-bezier(0.65, 0, 0.35, 1) 2.85s forwards;
-}
-@keyframes ysh-grow {
-  to {
-    transform: scaleX(1);
-  }
-}
-.ysh-smart {
+/* ---------- Signature ---------- */
+.lm-baseline {
   opacity: 0;
-  letter-spacing: 40px;
-  animation: ysh-track 0.6s cubic-bezier(0.22, 1, 0.36, 1) 3.2s forwards;
+  letter-spacing: 24px;
+  animation: lm-track 0.8s cubic-bezier(0.22, 1, 0.36, 1) 3.2s forwards;
 }
-@keyframes ysh-track {
+@keyframes lm-track {
   to {
     opacity: 1;
-    letter-spacing: 2px;
-  }
-}
-
-/* ---------- HOME ---------- */
-.ysh-home {
-  transform-box: fill-box;
-  transform-origin: center;
-  opacity: 0;
-  animation: ysh-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 3.55s forwards;
-}
-@keyframes ysh-rise {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    letter-spacing: 1px;
   }
 }
 
 /* ---------- Reflet et léger rebond final ---------- */
-.ysh-shine {
-  transform: translateX(-200px);
-  animation: ysh-shine 0.9s ease-in-out 4.15s forwards;
+.lm-shine {
+  transform: translateX(-300px);
+  animation: lm-shine 0.9s ease-in-out 4.15s forwards;
 }
-@keyframes ysh-shine {
+@keyframes lm-shine {
   to {
-    transform: translateX(700px);
+    transform: translateX(1500px);
   }
 }
-.ysh-all {
+.lm-all {
   transform-box: view-box;
   transform-origin: 50% 55%;
-  animation: ysh-settle 0.7s ease-out 4.2s;
+  animation: lm-settle 0.7s ease-out 4.2s;
 }
-@keyframes ysh-settle {
+@keyframes lm-settle {
   0% {
     transform: scale(1);
   }
@@ -194,7 +176,7 @@
 
 /* Mouvement réduit : le logo final s'affiche directement. */
 @media (prefers-reduced-motion: reduce) {
-  .ysh-root * {
+  .lm-root * {
     animation-duration: 0.01ms !important;
     animation-delay: 0s !important;
   }

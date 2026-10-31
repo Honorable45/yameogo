@@ -26,8 +26,8 @@ function Reveal({ text, start, step = 110 }: { text: string; start: number; step
   );
 }
 
-/** Photo d'accueil par défaut (Unsplash, licence libre), remplaçable dans l'admin : Paramètres › Photos du site. */
-const DEFAULT_HERO = 'https://images.unsplash.com/photo-1556656793-08538906a9f8';
+/** Photo d'accueil : la vitrine de la boutique. */
+const HERO_IMAGE = '/photos/vitrine.webp';
 
 /** Boutons de l'accueil : toujours sur une ligne, en verre dépoli (« liquid glass »). */
 const heroBtn =
@@ -44,8 +44,8 @@ export default async function HomePage() {
     serverGet<CatalogFacets>('/shop/catalog-facets?kind=PHONE', 300),
     serverGet<ReviewsPage>('/reviews/public?pageSize=3', 300),
   ]);
-  const shopName = settings?.shopName || 'Yameogo Smart Tech';
-  const tagline = settings?.tagline || 'La qualité au meilleur prix';
+  const shopName = settings?.shopName || 'Le Marchand';
+  const tagline = settings?.tagline || 'Votre repère du numérique.';
   // Le slogan s'écrit pendant que le logo se compose, puis les boutons apparaissent.
   const taglineStart = 900;
   const taglineEnd = taglineStart + tagline.split(' ').length * 240 + 700;
@@ -55,7 +55,7 @@ export default async function HomePage() {
       {/* Accueil : logo animé à gauche, slogan et boutons à droite (logo au-dessus du texte sur mobile). */}
       <section className="relative overflow-hidden bg-paper">
         {/* Photo de fond, éclaircie pour que le logo et le slogan restent lisibles. */}
-        <Image src={settings?.heroImageUrl || DEFAULT_HERO} alt={settings?.heroImageAlt ?? ''} fill priority sizes="100vw" className="object-cover" />
+        <Image src={HERO_IMAGE} alt="Vitrine de smartphones de la boutique" fill priority sizes="100vw" className="object-cover" />
         <span className="pointer-events-none absolute inset-0 bg-paper/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-paper/70 lg:via-paper/80 lg:to-paper/90" aria-hidden="true" />
         <div className="container-page relative grid items-center gap-2 pb-10 pt-32 sm:gap-6 sm:pb-14 sm:pt-36 lg:min-h-[88svh] lg:grid-cols-12 lg:gap-10 lg:pb-16 lg:pt-28">
           <div className="flex justify-center lg:col-span-6 lg:justify-start">

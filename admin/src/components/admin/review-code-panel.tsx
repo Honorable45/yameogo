@@ -38,7 +38,7 @@ export function ReviewCodePanel({ kind, id, customerPhone }: { kind: 'vente'; id
   if (!can('reviews.tokens')) return null;
 
   const link = data?.code && siteUrl ? `${siteUrl}/avis/laisser?code=${data.code}` : null;
-  const message = data?.code ? `Merci pour votre confiance ! Donnez votre avis sur YAMEOGO avec ce code : ${display(data.code)}${link ? `\n${link}` : ''}` : '';
+  const message = data?.code ? `Merci pour votre confiance ! Donnez votre avis sur Le Marchand avec ce code : ${display(data.code)}${link ? `\n${link}` : ''}` : '';
   const whatsapp = data?.code ? whatsappLink(customerPhone, message) : null;
 
   const regenerate = async () => {

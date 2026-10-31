@@ -55,7 +55,7 @@ async function bootstrap() {
   configureApp(app);
   app.enableShutdownHooks();
   await app.listen(config.port, '0.0.0.0');
-  Logger.log(`API YAMEOGO disponible sur le port ${config.port}`, 'Bootstrap');
+  Logger.log(`API Le Marchand disponible sur le port ${config.port}`, 'Bootstrap');
 }
 
 if (require.main === module) {

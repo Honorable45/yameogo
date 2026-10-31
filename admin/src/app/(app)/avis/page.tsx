@@ -62,7 +62,7 @@ function QrPanel() {
               onClick={async () => {
                 const a = document.createElement('a');
                 a.href = await qrPngDataUrl(url);
-                a.download = 'yameogo-qr-avis.png';
+                a.download = 'le-marchand-qr-avis.png';
                 a.click();
               }}
             >
@@ -73,7 +73,7 @@ function QrPanel() {
       </div>
       <Dialog open={printing} onClose={() => setPrinting(false)} title="Affiche « Votre avis »" footer={<Button onClick={() => window.print()}><Printer className="size-4" /> Imprimer</Button>}>
         <div className="print-area flex flex-col items-center bg-white px-6 py-10 text-center text-ink">
-          <p className="font-serif text-[30px] font-semibold">YAMEOGO</p>
+          <p className="font-serif text-[30px] font-semibold">Le Marchand</p>
           <p className="display mt-6 text-[34px]">Votre avis compte</p>
           <p className="mt-2 text-[15px] text-ink-2">Scannez ce code avec l’appareil photo de votre téléphone.</p>
           <div className="mt-8">

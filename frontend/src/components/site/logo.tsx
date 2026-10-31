@@ -1,23 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
+import { BrandMark } from '@/components/ui/brand-mark';
 import { cn } from '@/lib/cn';
 
-/**
- * Logo téléversé par la boutique, ou logotype typographique par défaut :
- * premier mot en gras (« YAMEOGO »), point orange, puis le reste du nom en petites capitales espacées (« SMART TECH »).
- */
-export function Logo({ logoUrl, name = 'Yameogo Smart Tech', inverted, className }: { logoUrl?: string | null; name?: string; inverted?: boolean; className?: string }) {
-  const [first, ...rest] = name.trim().split(/\s+/);
+/** Logo téléversé par la boutique, ou par défaut le sac orange suivi du nom. */
+export function Logo({ logoUrl, name = 'Le Marchand', inverted, className }: { logoUrl?: string | null; name?: string; inverted?: boolean; className?: string }) {
   return (
     <Link href="/" className={cn('inline-flex items-center', className)} aria-label={`${name} — accueil`}>
       {logoUrl ? (
         <img src={logoUrl.replace(/-1600\.webp$/, '-480.webp')} alt={name} className="h-8 w-auto" />
       ) : (
-        <span className={cn('flex items-center uppercase leading-none', inverted ? 'text-paper' : 'text-ink')}>
-          <span className="text-[17px] font-semibold tracking-[0.2em]">{first}</span>
-          {/* Très petits écrans : seul le premier mot reste, pour laisser la place au panier. */}
-          <span className="mx-1.5 inline-block size-[5px] rounded-full bg-ochre max-[359px]:hidden" aria-hidden="true" />
-          {rest.length > 0 && <span className={cn('whitespace-nowrap text-[10.5px] max-[359px]:hidden font-medium tracking-[0.3em]', inverted ? 'text-paper/70' : 'text-ink-2')}>{rest.join(' ')}</span>}
+        <span className={cn('flex items-center gap-2 leading-none', inverted ? 'text-paper' : 'text-ink')}>
+          <BrandMark className="h-8 w-auto shrink-0" />
+          <span className="whitespace-nowrap text-[18px] font-semibold tracking-tight">{name}</span>
         </span>
       )}
     </Link>

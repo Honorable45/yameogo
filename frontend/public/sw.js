@@ -1,11 +1,11 @@
 /*
- * Service worker de YAMEOGO (application installable).
+ * Service worker de Le Marchand (application installable).
  * - Pages : réseau d'abord (prix et stock toujours à jour) ; sans réseau, dernière version vue, sinon /hors-ligne.html (page autonome, sans script).
  * - Fichiers du site (/_next/static, versionnés) : cache d'abord.
  * - Photos (Cloudflare R2, Unsplash, API) : cache puis mise à jour en arrière-plan, 80 photos au plus.
  * - /api (sessions, avis, paiements) : jamais mis en cache.
  */
-const VERSION = 'ymg-v2';
+const VERSION = 'ymg-v3';
 const PAGES = `pages-${VERSION}`;
 const STATIC = `static-${VERSION}`;
 const IMAGES = `images-${VERSION}`;

@@ -4,7 +4,7 @@ import type { PublicSettings } from './types';
 function destination(s: PublicSettings | null) {
   if (s?.location) return `${s.location.latitude},${s.location.longitude}`;
   const address = [s?.addressLine, s?.city, s?.country].filter(Boolean).join(', ');
-  return address ? `${s?.shopName ?? 'Yameogo Smart Tech'}, ${address}` : null;
+  return address ? `${s?.shopName ?? 'Le Marchand'}, ${address}` : null;
 }
 
 /** Itinéraire Google Maps (ouvre l'application Maps sur téléphone). */
